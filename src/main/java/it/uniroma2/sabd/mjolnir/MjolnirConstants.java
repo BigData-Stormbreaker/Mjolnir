@@ -8,4 +8,9 @@ public class MjolnirConstants {
 
     public static final Integer PROPERTY_ENERGY = 0;
     public static final Integer PROPERTY_POWER  = 1;
+
+    public static final Long TIMESTAMP_START    = 1377986401L;
+    public static final Long TIMESTAMP_END      = 1380578399L;
+
+    public static final Double INSTANT_POWER_CONSUMPTION_THRESHOLD = 350D;
 }
