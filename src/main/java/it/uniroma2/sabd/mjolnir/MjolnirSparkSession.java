@@ -1,6 +1,7 @@
 package it.uniroma2.sabd.mjolnir;
 
 import it.uniroma2.sabd.mjolnir.entities.SensorRecord;
+import it.uniroma2.sabd.mjolnir.queries.EnergyConsumption;
 import it.uniroma2.sabd.mjolnir.queries.InstantPowerComputation;
 import org.apache.spark.SparkConf;
 import org.apache.spark.api.java.JavaPairRDD;
@@ -43,8 +44,16 @@ public class MjolnirSparkSession {
             }
         });
 
+        JavaRDD<SensorRecord> energyRecordsHouse0 = energyRecords.filter(new Function<SensorRecord, Boolean>() {
+            @Override
+            public Boolean call(SensorRecord sensorRecord) throws Exception {
+                return sensorRecord.getHouseID().equals(0);
+            }
+        });
+
         // SAMPLING HOUSE 0 - TODO replace with hdfs
         InstantPowerComputation.getHouseThresholdConsumption(powerRecordsHouse0);
 
+        EnergyConsumption.getEnergyConsumptionPerTimespan(energyRecordsHouse0, 6, 12);
     }
 }
