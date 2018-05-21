@@ -14,7 +14,7 @@ import static it.uniroma2.sabd.mjolnir.MjolnirConstants.INSTANT_POWER_CONSUMPTIO
 public class InstantPowerComputation implements Serializable {
 
 
-    public InstantPowerComputation(JavaRDD<SensorRecord> powerRecords){ }
+    public InstantPowerComputation(){ }
 
     public static JavaPairRDD<Long, Iterable<Tuple2<Integer, SensorRecord>>> getSensorRecordsByTimestamp(JavaRDD<SensorRecord> powerRecords) {
         // retrieving sensors records by timestamp
