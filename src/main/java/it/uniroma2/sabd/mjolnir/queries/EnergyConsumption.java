@@ -6,6 +6,8 @@ import org.apache.spark.api.java.JavaPairRDD;
 import org.apache.spark.api.java.JavaRDD;
 import org.apache.spark.api.java.function.Function;
 import org.apache.spark.api.java.function.Function2;
+import org.apache.spark.api.java.function.VoidFunction;
+import scala.Tuple2;
 
 import java.time.Instant;
 import java.time.LocalDateTime;
@@ -52,9 +54,9 @@ public class EnergyConsumption {
                 new Function2<EnergyConsumptionRecord, EnergyConsumptionRecord, EnergyConsumptionRecord>() {
                     @Override
                     public EnergyConsumptionRecord call(EnergyConsumptionRecord energyConsumptionRecord, EnergyConsumptionRecord energyConsumptionRecord2) throws Exception {
-                        energyConsumptionRecord.addNewValue(energyConsumptionRecord2.getMinEnergy());
-                        energyConsumptionRecord.addNewValue(energyConsumptionRecord2.getMaxEnergy());
-                        return energyConsumptionRecord;
+                        EnergyConsumptionRecord ecr = new EnergyConsumptionRecord();
+                        ecr.combineMeasures(energyConsumptionRecord, energyConsumptionRecord2);
+                        return ecr;
                     }
                 });
 
