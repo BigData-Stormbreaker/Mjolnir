@@ -13,4 +13,8 @@ public class MjolnirConstants {
     public static final Long TIMESTAMP_END      = 1380578399L;
 
     public static final Double INSTANT_POWER_CONSUMPTION_THRESHOLD = 350D;
+
+    public static final Integer GENERIC_HOURS  = 0;
+    public static final Integer RUSH_HOURS     = 2;
+    public static final Integer NO_RUSH_HOURS  = 1;
 }

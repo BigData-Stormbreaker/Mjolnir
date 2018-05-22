@@ -1,4 +1,4 @@
-package it.uniroma2.sabd.mjolnir.queries;
+package it.uniroma2.sabd.mjolnir.queries.helpers;
 
 import it.uniroma2.sabd.mjolnir.entities.SensorRecord;
 import org.apache.spark.api.java.JavaPairRDD;

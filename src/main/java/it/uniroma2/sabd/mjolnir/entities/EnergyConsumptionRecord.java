@@ -12,6 +12,13 @@ public class EnergyConsumptionRecord implements Serializable {
     private Double M = 0.0;
     private Double S = 0.0;
 
+    // tag value to keep trace of rush hours consumptions
+    private Integer tag;
+
+    public EnergyConsumptionRecord(Integer tag) {
+        this.tag = tag;
+    }
+
     public void addNewValue(Double value) {
         // updating value
         if (minEnergy == null) {
@@ -64,4 +71,6 @@ public class EnergyConsumptionRecord implements Serializable {
     public void incrementCounter() {
         this.counter += 1;
     }
+
+    public Integer getTag() { return tag; }
 }

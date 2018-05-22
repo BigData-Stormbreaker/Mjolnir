@@ -1,13 +1,14 @@
 package it.uniroma2.sabd.mjolnir;
 
 import it.uniroma2.sabd.mjolnir.entities.SensorRecord;
-import it.uniroma2.sabd.mjolnir.queries.EnergyConsumption;
-import it.uniroma2.sabd.mjolnir.queries.InstantPowerComputation;
+import it.uniroma2.sabd.mjolnir.queries.helpers.EnergyConsumption;
+import it.uniroma2.sabd.mjolnir.queries.helpers.InstantPowerComputation;
 import org.apache.spark.SparkConf;
-import org.apache.spark.api.java.JavaPairRDD;
 import org.apache.spark.api.java.JavaRDD;
 import org.apache.spark.api.java.JavaSparkContext;
 import org.apache.spark.api.java.function.Function;
+
+import static it.uniroma2.sabd.mjolnir.MjolnirConstants.GENERIC_HOURS;
 
 
 public class MjolnirSparkSession {
@@ -54,6 +55,6 @@ public class MjolnirSparkSession {
         // SAMPLING HOUSE 0 - TODO replace with hdfs
         InstantPowerComputation.getHouseThresholdConsumption(powerRecordsHouse0);
 
-        EnergyConsumption.getEnergyConsumptionPerTimespan(energyRecordsHouse0, 6, 12);
+        EnergyConsumption.getEnergyConsumptionPerTimespan(energyRecordsHouse0, GENERIC_HOURS);
     }
 }
