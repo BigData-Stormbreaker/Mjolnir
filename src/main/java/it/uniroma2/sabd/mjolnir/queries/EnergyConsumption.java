@@ -29,6 +29,20 @@ public class EnergyConsumption {
         });
     }
 
+    public static JavaRDD<SensorRecord> getRecordsByTimespan(JavaRDD<SensorRecord> energyRecords, Integer startHour, Integer endHour, Integer startWeekDay, Integer endWeekDay) {
+        // filtering by the given hour and week day timespan
+        return energyRecords.filter(new Function<SensorRecord, Boolean>() {
+            @Override
+            public Boolean call(SensorRecord sensorRecord) throws Exception {
+                // computing date from timestamp (assuming system default timezone)
+                LocalDateTime localDate = Instant.ofEpochMilli(sensorRecord.getTimestamp() * 1000).atZone(ZoneId.systemDefault()).toLocalDateTime();
+                // filtering if record timestamp is in the given timespan (start, end-1m)
+                return (startHour <= localDate.getHour() && localDate.getHour() < endHour) &&
+                       (startWeekDay <= localDate.getDayOfWeek().getValue() && localDate.getDayOfWeek().getValue() <= endWeekDay);
+            }
+        });
+    }
+
     public static JavaPairRDD<Integer, EnergyConsumptionRecord> getEnergyConsumptionPerTimespan(JavaRDD<SensorRecord> energyRecords, Integer startHour, Integer endHour) {
         // key by the plug identifier (assuming per house RDD as input)
         JavaPairRDD<Integer, SensorRecord> energyByPlug = getRecordsByTimespan(energyRecords, startHour, endHour).keyBy(new Function<SensorRecord, Integer>() {
@@ -62,5 +76,6 @@ public class EnergyConsumption {
 
         return energyAvgByPlug;
     }
+
 
 }
