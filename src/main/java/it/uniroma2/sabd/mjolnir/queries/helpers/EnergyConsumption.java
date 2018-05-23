@@ -57,6 +57,8 @@ public class EnergyConsumption {
     }
 
     public static JavaPairRDD<Integer, EnergyConsumptionRecord> getEnergyConsumptionPerTimespan(JavaRDD<SensorRecord> energyRecords, Integer tag) {
+
+        //TODO - i plug sono univoci per famiglia e non per casa, perciò credo si debbano combinare household_id e plug_in
         // key by the plug identifier (assuming per house RDD as input)
         JavaPairRDD<Integer, SensorRecord> energyByPlug = energyRecords.keyBy(new Function<SensorRecord, Integer>() {
             @Override
@@ -90,6 +92,7 @@ public class EnergyConsumption {
     }
 
     public static JavaRDD<Tuple2<Integer,Double>> getPlugsRank(SparkSession sparkSession, JavaPairRDD<Integer, EnergyConsumptionRecord> rushHoursConsumptions, JavaPairRDD<Integer, EnergyConsumptionRecord> notRushHoursConsumptions) {
+
         // performing a union over the two RDDs and computing the difference between the two average consumptions
         JavaPairRDD<Integer, Double> plugConsumptionAvgDifferences = rushHoursConsumptions.join(notRushHoursConsumptions).mapValues(new Function<Tuple2<EnergyConsumptionRecord, EnergyConsumptionRecord>, Double>() {
             @Override

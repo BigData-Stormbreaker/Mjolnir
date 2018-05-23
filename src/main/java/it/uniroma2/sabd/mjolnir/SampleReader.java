@@ -8,6 +8,7 @@ import org.apache.spark.api.java.function.Function;
 import org.apache.spark.api.java.function.VoidFunction;
 import org.apache.spark.sql.SQLContext;
 import org.apache.spark.util.LongAccumulator;
+import org.omg.PortableInterceptor.Interceptor;
 import scala.Int;
 import scala.Serializable;
 
@@ -17,25 +18,32 @@ public class SampleReader implements Serializable {
 
     public SampleReader() {}
 
-    public JavaRDD<SensorRecord> sampleRead(JavaSparkContext sc) {
+    public JavaRDD<SensorRecord> sampleRead(JavaSparkContext sc, Integer house_id) {
         // retrieving sql context
         SQLContext sqlContext = new SQLContext(sc);
 
         // retrieving data
-        JavaRDD<String> data = sc.textFile(getClass().getClassLoader().getResource("d14_filtered.csv").getPath());
+        // all data
+        JavaRDD<String> data;
+        if (house_id == -1) {
+            data = sc.textFile(getClass().getClassLoader().getResource("d14_filtered.csv").getPath());
+        } else { //or per-house data
+            data = sc.textFile(getClass().getClassLoader().getResource("house" + house_id).getPath());
+        }
 
         // obtaining an RDD of sensor records
         JavaRDD<SensorRecord> sensorData = data.map(new Function<String, SensorRecord>() {
             public SensorRecord call(String line) throws Exception {
                 // splitting csv line
                 String[] fields = line.split(",");
-                SensorRecord sr = new SensorRecord(Long.valueOf(fields[0]),
-                                                   Long.valueOf(fields[1]),
-                                                   Double.valueOf(fields[2]),
-                                                   Integer.valueOf(fields[3]),
-                                                   Integer.valueOf(fields[4]),
-                                                   Integer.valueOf(fields[5]),
-                                                   Integer.valueOf(fields[6]));
+                SensorRecord sr = new SensorRecord(Long.valueOf(fields[0]),     //id_record
+                                                   Long.valueOf(fields[1]),     //timestamp
+                                                   Double.valueOf(fields[2]),   //value - measure
+                                                   Integer.valueOf(fields[3]),  //property - cumulative energy
+                                                                                //or power snapshot
+                                                   Integer.valueOf(fields[4]),  //plug_id
+                                                   Integer.valueOf(fields[5]),  //household_id
+                                                   Integer.valueOf(fields[6])); //house_id
                 return sr;
             }
         });

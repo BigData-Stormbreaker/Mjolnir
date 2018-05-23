@@ -1,12 +1,13 @@
 package it.uniroma2.sabd.mjolnir.entities;
 
+import java.io.Serializable;
 import java.sql.Timestamp;
 
 import static it.uniroma2.sabd.mjolnir.MjolnirConstants.PROPERTY_ENERGY;
 import static it.uniroma2.sabd.mjolnir.MjolnirConstants.PROPERTY_POWER;
 
 
-public class SensorRecord {
+public class SensorRecord implements Serializable {
 
     private Long id;
     private Long timestamp;

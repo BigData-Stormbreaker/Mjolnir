@@ -36,6 +36,7 @@ public class InstantPowerComputation implements Serializable {
     }
 
     public static JavaPairRDD<Long, Double> getHouseThresholdConsumption(JavaRDD<SensorRecord> housePowerRecords) {
+
         // retrieving all the aggregated instant power consumption values
         JavaPairRDD<Long, Double> housePowerConsumptionByTime = housePowerRecords.keyBy(new Function<SensorRecord, Long>() {
             // -> key by timestamp
