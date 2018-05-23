@@ -1,5 +1,6 @@
 package it.uniroma2.sabd.mjolnir;
 
+import it.uniroma2.sabd.mjolnir.entities.EnergyConsumptionRecord;
 import it.uniroma2.sabd.mjolnir.entities.SensorRecord;
 import it.uniroma2.sabd.mjolnir.queries.helpers.EnergyConsumption;
 import it.uniroma2.sabd.mjolnir.queries.helpers.InstantPowerComputation;
@@ -8,11 +9,16 @@ import org.apache.spark.api.java.JavaPairRDD;
 import org.apache.spark.api.java.JavaRDD;
 import org.apache.spark.api.java.JavaSparkContext;
 import org.apache.spark.api.java.function.Function;
+import java.time.DayOfWeek;
 
 
 import java.util.ArrayList;
+import java.util.Map;
 
 import static it.uniroma2.sabd.mjolnir.MjolnirConstants.GENERIC_HOURS;
+import static it.uniroma2.sabd.mjolnir.MjolnirConstants.NO_RUSH_HOURS;
+import static it.uniroma2.sabd.mjolnir.MjolnirConstants.RUSH_HOURS;
+import static java.util.Calendar.*;
 
 
 public class MjolnirSparkSession {
@@ -57,14 +63,23 @@ public class MjolnirSparkSession {
                 }
             });
 
-            // IF THERE MORE THAN 0, THEN WE CAN ADD THE HOUSEID
+            // IF THERE ARE MORE THAN 0, THEN WE CAN ADD THE HOUSEID
             if (overPowerRecords.count() > 0) {
                 result.add(i);
             }
 
+//            JavaRDD<SensorRecord> firstSpan = EnergyConsumption.getRecordsByTimespan(energyRecords, 0, 6);
+//            JavaRDD<SensorRecord> secondSpan = EnergyConsumption.getRecordsByTimespan(energyRecords, 6, 12);
+//            JavaRDD<SensorRecord> thirdSpan = EnergyConsumption.getRecordsByTimespan(energyRecords, 12, 18);
+//            JavaRDD<SensorRecord> fourthSpan = EnergyConsumption.getRecordsByTimespan(energyRecords, 18, 24);
+//
+//            JavaPairRDD<Integer, EnergyConsumptionRecord> energyConsumptionfirstTimespan = EnergyConsumption.getEnergyConsumptionPerTimespan(firstSpan, GENERIC_HOURS);
+//            EnergyConsumption.getEnergyConsumptionPerTimespan(secondSpan, GENERIC_HOURS);
+//            EnergyConsumption.getEnergyConsumptionPerTimespan(thirdSpan, GENERIC_HOURS);
+//            EnergyConsumption.getEnergyConsumptionPerTimespan(fourthSpan, GENERIC_HOURS);
+//
+//            Map<Integer, EnergyConsumptionRecord> integerEnergyConsumptionRecordMap = energyConsumptionfirstTimespan.collectAsMap();
 
-
-            // QUERY 2
 
             EnergyConsumption.getEnergyConsumptionPerTimespan(energyRecords, GENERIC_HOURS);
 
