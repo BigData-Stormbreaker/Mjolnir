@@ -56,19 +56,19 @@ public class EnergyConsumption {
         });
     }
 
-    public static JavaPairRDD<Integer, EnergyConsumptionRecord> getEnergyConsumptionPerTimespan(JavaRDD<SensorRecord> energyRecords, Integer tag) {
+    public static JavaPairRDD<String, EnergyConsumptionRecord> getEnergyConsumptionPerTimespan(JavaRDD<SensorRecord> energyRecords, Integer tag) {
 
         //TODO - i plug sono univoci per famiglia e non per casa, perciò credo si debbano combinare household_id e plug_in
         // key by the plug identifier (assuming per house RDD as input)
-        JavaPairRDD<Integer, SensorRecord> energyByPlug = energyRecords.keyBy(new Function<SensorRecord, Integer>() {
+        JavaPairRDD<String, SensorRecord> energyByPlug = energyRecords.keyBy(new Function<SensorRecord, String>() {
             @Override
-            public Integer call(SensorRecord sensorRecord) throws Exception {
-                return sensorRecord.getPlugID();
+            public String call(SensorRecord sensorRecord) throws Exception {
+                return sensorRecord.getHouseholdID().toString() + "_" + sensorRecord.getPlugID().toString();
             }
         });
 
         // retrieving average by plug
-        JavaPairRDD<Integer, EnergyConsumptionRecord> energyAvgByPlug = energyByPlug.aggregateByKey(
+        JavaPairRDD<String, EnergyConsumptionRecord> energyAvgByPlug = energyByPlug.aggregateByKey(
                 new EnergyConsumptionRecord(tag),
                 // -> computing at runtime variance and updating min/max energy consumption measures
                 new Function2<EnergyConsumptionRecord, SensorRecord, EnergyConsumptionRecord>() {

@@ -4,8 +4,9 @@ import java.io.Serializable;
 
 public class EnergyConsumptionRecord implements Serializable {
 
-    private Double minEnergy = null;
-    private Double maxEnergy = null;
+//    private Double minEnergy = null;
+//    private Double maxEnergy = null;
+    private Double oldValue = 0.0;
 
     // aux parameter to compute variance over samples
     private Integer counter = 0;
@@ -21,45 +22,52 @@ public class EnergyConsumptionRecord implements Serializable {
 
     public void addNewValue(Double value) {
         // updating value
-        if (minEnergy == null) {
-            minEnergy = value;
-            maxEnergy = value;
-        } else {
-            if (value <= minEnergy) minEnergy = value;
-            if (value >= maxEnergy) maxEnergy = value;
-        }
+//        if (minEnergy == null) {
+//            minEnergy = value;
+//            maxEnergy = value;
+//        } else {
+//            if (value <= minEnergy) minEnergy = value;
+//            if (value >= maxEnergy) maxEnergy = value;
+//        }
+        Double delta = value - oldValue;
+
+        // the plug has been activated (or reset)
+
 
         // computing variance over samples
         incrementCounter();
         Double oldM = M;
-        M = M + (value - M) / counter;
-        S = S + (value - M) * (value - oldM);
+        M = M + (delta - M) / counter;
+        S = S + (delta - M) * (delta - oldM);
+
+        oldValue = value;
     }
 
     public void combineMeasures(EnergyConsumptionRecord r1, EnergyConsumptionRecord r2) {
         // combining min and max energy measures
-        minEnergy = (r1.getMinEnergy() <= r2.getMinEnergy()) ? r1.getMinEnergy() : r2.getMinEnergy();
-        maxEnergy = (r1.getMaxEnergy() <= r2.getMaxEnergy()) ? r1.getMaxEnergy() : r2.getMaxEnergy();
+//        minEnergy = (r1.getMinEnergy() <= r2.getMinEnergy()) ? r1.getMinEnergy() : r2.getMinEnergy();
+//        maxEnergy = (r1.getMaxEnergy() <= r2.getMaxEnergy()) ? r1.getMaxEnergy() : r2.getMaxEnergy();
         // combining S and aux variables
-        S = r1.S + r2.S;
-        M = r1.M + r2.M;
         counter = r1.getCounter() + r2.getCounter();
+        M = (r1.getCounter() * r1.M + r2.getCounter() * r2.M) / counter;
+        S = (r1.getCounter() * (r1.getVariance() + Math.pow(r1.M - M, 2.0)) + r2.getCounter() * (r2.getVariance() + Math.pow(r2.M - M, 2.0)));
     }
 
-    public Double getMinEnergy() {
-        return minEnergy;
-    }
-
-    public Double getMaxEnergy() {
-        return maxEnergy;
-    }
+//    public Double getMinEnergy() {
+//        return minEnergy;
+//    }
+//
+//    public Double getMaxEnergy() {
+//        return maxEnergy;
+//    }
 
     public Double getAvgEnergyConsumption() {
-        return (getMaxEnergy() - getMinEnergy()) / 2;
+        //return (getMaxEnergy() - getMinEnergy()) / 2;
+        return M;
     }
 
     public Double getVariance() {
-        return S / (getCounter() - 1);
+        return S / (getCounter());
     }
 
     public Double getStandardDeviation() { return Math.sqrt(getVariance()); }
