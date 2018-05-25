@@ -1,4 +1,4 @@
-package it.uniroma2.sabd.mjolnir.queries.helpers;
+package it.uniroma2.sabd.mjolnir.helpers;
 
 import it.uniroma2.sabd.mjolnir.entities.EnergyConsumptionRecord;
 import it.uniroma2.sabd.mjolnir.entities.SensorRecord;
@@ -22,8 +22,8 @@ import java.time.ZoneId;
 import java.util.ArrayList;
 import java.util.List;
 
-import static it.uniroma2.sabd.mjolnir.MjolnirConstants.NO_RUSH_HOURS;
-import static it.uniroma2.sabd.mjolnir.MjolnirConstants.RUSH_HOURS;
+import static it.uniroma2.sabd.mjolnir.MjolnirConstants.NO_RUSH_HOURS_TAG;
+import static it.uniroma2.sabd.mjolnir.MjolnirConstants.RUSH_HOURS_TAG;
 import static org.apache.spark.sql.functions.rank;
 
 public class EnergyConsumption {
@@ -58,7 +58,6 @@ public class EnergyConsumption {
 
     public static JavaPairRDD<String, EnergyConsumptionRecord> getEnergyConsumptionPerTimespan(JavaRDD<SensorRecord> energyRecords, Integer tag) {
 
-        //TODO - i plug sono univoci per famiglia e non per casa, perciò credo si debbano combinare household_id e plug_in
         // key by the plug identifier (assuming per house RDD as input)
         JavaPairRDD<String, SensorRecord> energyByPlug = energyRecords.keyBy(new Function<SensorRecord, String>() {
             @Override
@@ -98,8 +97,8 @@ public class EnergyConsumption {
             @Override
             public Double call(Tuple2<EnergyConsumptionRecord, EnergyConsumptionRecord> recordsTuple) throws Exception {
                 // returning difference by rush / no rush hours consumption
-                Double rushValue   = (recordsTuple._1.getTag().equals(RUSH_HOURS)) ? recordsTuple._1.getAvgEnergyConsumption() : recordsTuple._2.getAvgEnergyConsumption();
-                Double noRushValue = (recordsTuple._1.getTag().equals(NO_RUSH_HOURS)) ? recordsTuple._1.getAvgEnergyConsumption() : recordsTuple._2.getAvgEnergyConsumption();
+                Double rushValue   = (recordsTuple._1.getTag().equals(RUSH_HOURS_TAG)) ? recordsTuple._1.getAvgEnergyConsumption() : recordsTuple._2.getAvgEnergyConsumption();
+                Double noRushValue = (recordsTuple._1.getTag().equals(NO_RUSH_HOURS_TAG)) ? recordsTuple._1.getAvgEnergyConsumption() : recordsTuple._2.getAvgEnergyConsumption();
                 return rushValue - noRushValue;
             }
         });

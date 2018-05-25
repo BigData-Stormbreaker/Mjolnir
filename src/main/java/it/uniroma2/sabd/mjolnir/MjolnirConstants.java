@@ -1,5 +1,7 @@
 package it.uniroma2.sabd.mjolnir;
 
+import java.util.ArrayList;
+
 public class MjolnirConstants {
 
     public static final String APP_NAME     = "mjolnir";
@@ -14,7 +16,26 @@ public class MjolnirConstants {
 
     public static final Double INSTANT_POWER_CONSUMPTION_THRESHOLD = 350D;
 
-    public static final Integer GENERIC_HOURS  = 0;
-    public static final Integer RUSH_HOURS     = 2;
-    public static final Integer NO_RUSH_HOURS  = 1;
+    public static final Integer GENERIC_HOURS_TAG  = 0;
+    public static final Integer RUSH_HOURS_TAG     = 2;
+    public static final Integer NO_RUSH_HOURS_TAG  = 1;
+
+    public static final Integer[] DAY_QUARTER_STARTS = {0, 6, 12, 18};
+    public static final Integer[] DAY_QUARTER_ENDS   = {6, 12, 18, 24};
+
+    public static final Integer RUSH_HOURS_START_H = 6;
+    public static final Integer RUSH_HOURS_END_H   = 18;
+    public static final Integer RUSH_HOURS_START_D = 1;
+    public static final Integer RUSH_HOURS_END_D   = 5;
+
+    public static final Integer NO_RUSH_HOURS_START_H   = 18;
+    public static final Integer NO_RUSH_HOURS_END_H     = 6;
+    public static final Integer NO_RUSH_HOURS_START_D   = 1;
+    public static final Integer NO_RUSH_HOURS_END_D     = 5;
+
+    public static final Integer NO_RUSH_WEEKEND_START_H = 0;
+    public static final Integer NO_RUSH_WEEKEND_END_H   = 23;
+    public static final Integer NO_RUSH_WEEKEND_START_D = 6;
+    public static final Integer NO_RUSH_WEEKEND_END_D   = 7;
+
 }
