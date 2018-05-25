@@ -103,7 +103,7 @@ public class EnergyConsumption {
                 // returning difference by rush / no rush hours consumption
                 Double rushValue   = (recordsTuple._1.getTag().equals(RUSH_HOURS_TAG)) ? recordsTuple._1.getAvgEnergyConsumption() : recordsTuple._2.getAvgEnergyConsumption();
                 Double noRushValue = (recordsTuple._1.getTag().equals(NO_RUSH_HOURS_TAG)) ? recordsTuple._1.getAvgEnergyConsumption() : recordsTuple._2.getAvgEnergyConsumption();
-                return Math.abs(rushValue - noRushValue);
+                return rushValue - noRushValue;
             }
         });
 
