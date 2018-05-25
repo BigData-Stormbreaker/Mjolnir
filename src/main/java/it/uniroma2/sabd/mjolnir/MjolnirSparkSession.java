@@ -10,6 +10,7 @@ import org.apache.spark.api.java.JavaRDD;
 import org.apache.spark.api.java.JavaSparkContext;
 import org.apache.spark.api.java.function.Function;
 import org.apache.spark.api.java.function.VoidFunction;
+import org.apache.spark.sql.SparkSession;
 import scala.Tuple2;
 
 import static it.uniroma2.sabd.mjolnir.MjolnirConstants.*;
@@ -27,17 +28,21 @@ public class MjolnirSparkSession {
                 .setMaster(MASTER_LOCAL);
 
         // retrieving spark context
-        JavaSparkContext sc = new JavaSparkContext(conf);
+        JavaSparkContext sparkContext = new JavaSparkContext(conf);
+
+        // retrieving spark session
+        SparkSession sparkSession = new SparkSession(sparkContext.sc());
 
         int houseID;
         ArrayList<Integer> query1Result = new ArrayList<>();
         ArrayList<EnergyConsumptionRecord> query2Result = new ArrayList<>();
+        ArrayList<JavaRDD<Tuple2<Integer, Double>>> query3Result = new ArrayList<>();
 
         for(houseID = 0; houseID < 1; houseID++) {
 
             // SENSOR RECORDS - no distinction on power/energy
             SampleReader sr = new SampleReader();
-            JavaRDD<SensorRecord> sensorRecords = sr.sampleRead(sc, houseID);
+            JavaRDD<SensorRecord> sensorRecords = sr.sampleRead(sparkContext, houseID);
 
             // POWER & ENERGY RECORDS RDDs
             JavaRDD<SensorRecord> powerRecords = sensorRecords.filter(new Function<SensorRecord, Boolean>() {
@@ -75,7 +80,7 @@ public class MjolnirSparkSession {
                 // retrieving energy records and average consumption by day quarter
                 JavaRDD<SensorRecord> energyRecordsQ = EnergyConsumption.getRecordsByTimespan(energyRecords, DAY_QUARTER_STARTS[j], DAY_QUARTER_ENDS[j]);
                 JavaPairRDD<String, EnergyConsumptionRecord> energyConsumptionQ = EnergyConsumption.getEnergyConsumptionPerTimespan(energyRecordsQ, GENERIC_HOURS_TAG);
-                // computing per timespan average
+                // computing per timespan average (iterating over plugs' consumptions)
                 EnergyConsumptionRecord ecr = new EnergyConsumptionRecord(GENERIC_HOURS_TAG);
                 ecr.setHouseID(houseID);
                 energyConsumptionQ.foreach(new VoidFunction<Tuple2<String, EnergyConsumptionRecord>>() {
@@ -90,7 +95,30 @@ public class MjolnirSparkSession {
 
 
             // --------------- QUERY 3 ---------------
+            // retrieving rush hour consumptions
+            JavaRDD<SensorRecord> energyRecordsRH = EnergyConsumption.getRecordsByTimespan(energyRecords, RUSH_HOURS_START_D, RUSH_HOURS_END_D, RUSH_HOURS_START_H, RUSH_HOURS_END_H);
+            JavaPairRDD<String, EnergyConsumptionRecord> energyConsumptionRH = EnergyConsumption.getEnergyConsumptionPerTimespan(energyRecordsRH, RUSH_HOURS_TAG);
 
+            // retrieving the two kind of no-rush hours consumptions
+            // - no rush hours working days
+            JavaRDD<SensorRecord> energyRecordsNRH_W = EnergyConsumption.getRecordsByTimespan(energyRecords, NO_RUSH_HOURS_START_D, NO_RUSH_HOURS_END_D, NO_RUSH_HOURS_START_H, NO_RUSH_HOURS_END_H);
+            JavaPairRDD<String, EnergyConsumptionRecord> energyConsumptionNRH_W = EnergyConsumption.getEnergyConsumptionPerTimespan(energyRecordsNRH_W, NO_RUSH_HOURS_TAG);
+            // - no rush hours weekend
+            JavaRDD<SensorRecord> energyRecordsNRH_WE = EnergyConsumption.getRecordsByTimespan(energyRecords, NO_RUSH_WEEKEND_START_D, NO_RUSH_WEEKEND_END_D, NO_RUSH_WEEKEND_START_H, NO_RUSH_WEEKEND_END_H);
+            JavaPairRDD<String, EnergyConsumptionRecord> energyConsumptionNRH_WE = EnergyConsumption.getEnergyConsumptionPerTimespan(energyRecordsNRH_WE, NO_RUSH_HOURS_TAG);
+            // joining the two RDDs
+            JavaPairRDD<String, EnergyConsumptionRecord> energyConsumptionNRH = energyConsumptionNRH_W.join(energyConsumptionNRH_WE).mapValues(new Function<Tuple2<EnergyConsumptionRecord, EnergyConsumptionRecord>, EnergyConsumptionRecord>() {
+                @Override
+                public EnergyConsumptionRecord call(Tuple2<EnergyConsumptionRecord, EnergyConsumptionRecord> t) throws Exception {
+                    EnergyConsumptionRecord ecr = new EnergyConsumptionRecord(NO_RUSH_HOURS_TAG);
+                    ecr.combineMeasures(t._1, t._2);
+                    return ecr;
+                }
+            });
+
+            // retrieving rank of plugs
+            JavaRDD<Tuple2<Integer, Double>> plugsRankPerHouse = EnergyConsumption.getPlugsRank(sparkSession, energyConsumptionRH, energyConsumptionNRH);
+            query3Result.add(plugsRankPerHouse);
         }
 
     }

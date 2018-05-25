@@ -73,7 +73,11 @@ public class EnergyConsumption {
                 new Function2<EnergyConsumptionRecord, SensorRecord, EnergyConsumptionRecord>() {
                     @Override
                     public EnergyConsumptionRecord call(EnergyConsumptionRecord energyConsumptionRecord, SensorRecord sensorRecord) throws Exception {
+                        // --> update step
                         energyConsumptionRecord.addNewValue(sensorRecord.getValue());
+                        // plug tagging for further aggregation
+                        if (energyConsumptionRecord.getPlugID() == null)
+                            energyConsumptionRecord.setPlugID(sensorRecord.getPlugID());
                         return energyConsumptionRecord;
                     }
                 },
@@ -90,16 +94,16 @@ public class EnergyConsumption {
         return energyAvgByPlug;
     }
 
-    public static JavaRDD<Tuple2<Integer,Double>> getPlugsRank(SparkSession sparkSession, JavaPairRDD<Integer, EnergyConsumptionRecord> rushHoursConsumptions, JavaPairRDD<Integer, EnergyConsumptionRecord> notRushHoursConsumptions) {
+    public static JavaRDD<Tuple2<Integer, Double>> getPlugsRank(SparkSession sparkSession, JavaPairRDD<String, EnergyConsumptionRecord> rushHoursConsumptions, JavaPairRDD<String, EnergyConsumptionRecord> notRushHoursConsumptions) {
 
-        // performing a union over the two RDDs and computing the difference between the two average consumptions
-        JavaPairRDD<Integer, Double> plugConsumptionAvgDifferences = rushHoursConsumptions.join(notRushHoursConsumptions).mapValues(new Function<Tuple2<EnergyConsumptionRecord, EnergyConsumptionRecord>, Double>() {
+        // performing a join over the two RDDs and computing the difference between the two average consumptions
+        JavaPairRDD<String, Double> plugConsumptionAvgDifferences = rushHoursConsumptions.join(notRushHoursConsumptions).mapValues(new Function<Tuple2<EnergyConsumptionRecord, EnergyConsumptionRecord>, Double>() {
             @Override
             public Double call(Tuple2<EnergyConsumptionRecord, EnergyConsumptionRecord> recordsTuple) throws Exception {
                 // returning difference by rush / no rush hours consumption
                 Double rushValue   = (recordsTuple._1.getTag().equals(RUSH_HOURS_TAG)) ? recordsTuple._1.getAvgEnergyConsumption() : recordsTuple._2.getAvgEnergyConsumption();
                 Double noRushValue = (recordsTuple._1.getTag().equals(NO_RUSH_HOURS_TAG)) ? recordsTuple._1.getAvgEnergyConsumption() : recordsTuple._2.getAvgEnergyConsumption();
-                return rushValue - noRushValue;
+                return Math.abs(rushValue - noRushValue);
             }
         });
 
@@ -115,9 +119,10 @@ public class EnergyConsumption {
         StructType schema = DataTypes.createStructType(fields);
 
         // -> mapping into rows
-        JavaRDD<Row> plugsRows = plugConsumptionAvgDifferences.map(new Function<Tuple2<Integer, Double>, Row>() {
+        JavaRDD<Row> plugsRows = plugConsumptionAvgDifferences.map(new Function<Tuple2<String, Double>, Row>() {
             @Override
-            public Row call(Tuple2<Integer, Double> t) throws Exception {
+            public Row call(Tuple2<String, Double> t) throws Exception {
+                // plug unique identifier is houseID_householdID_plugID
                 return RowFactory.create(t._1, t._2);
             }
         });
