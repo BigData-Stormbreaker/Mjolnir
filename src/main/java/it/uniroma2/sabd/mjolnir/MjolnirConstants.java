@@ -28,13 +28,15 @@ public class MjolnirConstants {
     public static final Integer RUSH_HOURS_START_D = 1;
     public static final Integer RUSH_HOURS_END_D   = 5;
 
-    public static final Integer NO_RUSH_HOURS_START_H   = 18;
-    public static final Integer NO_RUSH_HOURS_END_H     = 6;
+    public static final Integer NO_RUSH_HOURS_START_H_1   = 0;
+    public static final Integer NO_RUSH_HOURS_END_H_1     = 6;
+    public static final Integer NO_RUSH_HOURS_START_H_2   = 18;
+    public static final Integer NO_RUSH_HOURS_END_H_2     = 24;
     public static final Integer NO_RUSH_HOURS_START_D   = 1;
     public static final Integer NO_RUSH_HOURS_END_D     = 5;
 
     public static final Integer NO_RUSH_WEEKEND_START_H = 0;
-    public static final Integer NO_RUSH_WEEKEND_END_H   = 23;
+    public static final Integer NO_RUSH_WEEKEND_END_H   = 24;
     public static final Integer NO_RUSH_WEEKEND_START_D = 6;
     public static final Integer NO_RUSH_WEEKEND_END_D   = 7;
 

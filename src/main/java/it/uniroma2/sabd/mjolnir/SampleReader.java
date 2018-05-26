@@ -19,8 +19,6 @@ public class SampleReader implements Serializable {
     public SampleReader() {}
 
     public JavaRDD<SensorRecord> sampleRead(JavaSparkContext sc, Integer house_id) {
-        // retrieving sql context
-        SQLContext sqlContext = new SQLContext(sc);
 
         // retrieving data
         // all data

@@ -25,6 +25,7 @@ public class EnergyConsumptionRecord implements Serializable {
         this.tag = tag;
     }
 
+
     public void addNewValue(Double value) {
         // updating value
         Double delta = value - oldValue;

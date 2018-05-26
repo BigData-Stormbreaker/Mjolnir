@@ -112,17 +112,15 @@ public class EnergyConsumption {
         // -> creating the new schema
         String schemaString = "plugID value";
         List<StructField> fields = new ArrayList<>();
-        for (String fieldName : schemaString.split(" ")) {
-            StructField field = DataTypes.createStructField(fieldName, DataTypes.StringType, true);
-            fields.add(field);
-        }
+        fields.add(DataTypes.createStructField("plugID", DataTypes.StringType, true));
+        fields.add(DataTypes.createStructField("value", DataTypes.DoubleType, true));
         StructType schema = DataTypes.createStructType(fields);
 
         // -> mapping into rows
         JavaRDD<Row> plugsRows = plugConsumptionAvgDifferences.map(new Function<Tuple2<String, Double>, Row>() {
             @Override
             public Row call(Tuple2<String, Double> t) throws Exception {
-                // plug unique identifier is houseID_householdID_plugID
+                // plug unique identifier is houseID_plugID
                 return RowFactory.create(t._1, t._2);
             }
         });
