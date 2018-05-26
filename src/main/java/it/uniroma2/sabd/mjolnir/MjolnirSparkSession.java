@@ -4,6 +4,7 @@ import it.uniroma2.sabd.mjolnir.entities.EnergyConsumptionRecord;
 import it.uniroma2.sabd.mjolnir.entities.SensorRecord;
 import it.uniroma2.sabd.mjolnir.helpers.EnergyConsumption;
 import it.uniroma2.sabd.mjolnir.helpers.InstantPowerComputation;
+import it.uniroma2.sabd.mjolnir.utils.HBaseClient;
 import org.apache.spark.SparkConf;
 import org.apache.spark.api.java.JavaPairRDD;
 import org.apache.spark.api.java.JavaRDD;
@@ -16,7 +17,7 @@ import scala.Tuple2;
 import static it.uniroma2.sabd.mjolnir.MjolnirConstants.*;
 
 import java.util.ArrayList;
-
+import java.util.Map;
 
 
 public class MjolnirSparkSession {
@@ -59,7 +60,7 @@ public class MjolnirSparkSession {
             // --------------- QUERY 1 ---------------
             // retrieving houses with instant power consumption more than the given threshold (350W)
             JavaPairRDD<Long, Double> houseInstantOverPowerThreshold = InstantPowerComputation.getHouseThresholdConsumption(powerRecords);
-            // adding to house list if some given time the I.P.C. was over threashold
+            // adding to house list if some given time the I.P.C. was over threshold
             if (!houseInstantOverPowerThreshold.isEmpty())
                 query1Result.add(houseID);
 
@@ -80,15 +81,19 @@ public class MjolnirSparkSession {
                 // retrieving energy records and average consumption by day quarter
                 JavaRDD<SensorRecord> energyRecordsQ = EnergyConsumption.getRecordsByTimespan(energyRecords, DAY_QUARTER_STARTS[j], DAY_QUARTER_ENDS[j]);
                 JavaPairRDD<String, EnergyConsumptionRecord> energyConsumptionQ = EnergyConsumption.getEnergyConsumptionPerTimespan(energyRecordsQ, GENERIC_HOURS_TAG);
+
                 // computing per timespan average (iterating over plugs' consumptions)
                 EnergyConsumptionRecord ecr = new EnergyConsumptionRecord(GENERIC_HOURS_TAG);
+
                 ecr.setHouseID(houseID);
-                energyConsumptionQ.foreach(new VoidFunction<Tuple2<String, EnergyConsumptionRecord>>() {
-                    @Override
-                    public void call(Tuple2<String, EnergyConsumptionRecord> t) throws Exception {
-                        ecr.combineMeasures(ecr, t._2);
-                    }
-                });
+                Map<String, EnergyConsumptionRecord> stringEnergyConsumptionRecordMap = energyConsumptionQ.collectAsMap();
+
+                for (Map.Entry<String, EnergyConsumptionRecord> entry : stringEnergyConsumptionRecordMap.entrySet()) {
+                    ecr.combineMeasures(ecr, entry.getValue());
+                }
+
+                System.out.println("house" + ecr.getHouseID() + "-plug" + ecr.getPlugID() + ": " + "AvgEnergy: " + ecr.getAvgEnergyConsumption() +
+                        " stdDev: " + ecr.getStandardDeviation());
                 // updating query results
                 query2Result.add(ecr);
             }
@@ -120,6 +125,14 @@ public class MjolnirSparkSession {
             JavaRDD<Tuple2<Integer, Double>> plugsRankPerHouse = EnergyConsumption.getPlugsRank(sparkSession, energyConsumptionRH, energyConsumptionNRH);
             query3Result.add(plugsRankPerHouse);
         }
+
+        System.out.println(query1Result);
+        for (EnergyConsumptionRecord ecr: query2Result) {
+            System.out.println("house" + ecr.getHouseID() + "-plug" + ecr.getPlugID() + ": " + "AvgEnergy: " + ecr.getAvgEnergyConsumption() +
+            " stdDev: " + ecr.getStandardDeviation());
+        }
+        System.out.println(query3Result);
+
 
     }
 }
