@@ -24,6 +24,8 @@ import java.util.List;
 
 import static it.uniroma2.sabd.mjolnir.MjolnirConstants.NO_RUSH_HOURS_TAG;
 import static it.uniroma2.sabd.mjolnir.MjolnirConstants.RUSH_HOURS_TAG;
+import static org.apache.spark.sql.functions.asc;
+import static org.apache.spark.sql.functions.desc;
 import static org.apache.spark.sql.functions.rank;
 
 public class EnergyConsumption {
@@ -127,8 +129,9 @@ public class EnergyConsumption {
 
         // -> applying schema to RDD
         Dataset<Row> plugsDataset = sparkSession.createDataFrame(plugsRows, schema);
+        plugsDataset.show();
         // -> ranking and returning the result
-        return plugsDataset.withColumn("plugID", rank().over(Window.orderBy("value")))
+        return plugsDataset.orderBy(desc("value"))
                 .toJavaRDD()
                 .map(
                         new Function<Row, Tuple2<Integer, Double>>() {
