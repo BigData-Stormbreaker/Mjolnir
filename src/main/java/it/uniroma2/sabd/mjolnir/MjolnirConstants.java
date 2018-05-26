@@ -40,4 +40,6 @@ public class MjolnirConstants {
     public static final Integer NO_RUSH_WEEKEND_START_D = 6;
     public static final Integer NO_RUSH_WEEKEND_END_D   = 7;
 
+    public static final Double RESET_THRESHOLD_MULTIPLIER = 0.5;
+
 }

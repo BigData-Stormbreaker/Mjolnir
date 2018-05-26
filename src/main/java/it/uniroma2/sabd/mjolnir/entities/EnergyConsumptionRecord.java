@@ -2,6 +2,8 @@ package it.uniroma2.sabd.mjolnir.entities;
 
 import java.io.Serializable;
 
+import static it.uniroma2.sabd.mjolnir.MjolnirConstants.RESET_THRESHOLD_MULTIPLIER;
+
 public class EnergyConsumptionRecord implements Serializable {
 
 //    private Double minEnergy = null;
@@ -27,10 +29,23 @@ public class EnergyConsumptionRecord implements Serializable {
 
 
     public void addNewValue(Double value) {
-        // updating value
-        Double delta = value - oldValue;
 
-        // TODO - the plug has been activated (or reset)
+        Double delta;
+
+        // evaluating if an anomaly occurred
+        if (value < oldValue) {
+            if (value <= RESET_THRESHOLD_MULTIPLIER*oldValue) {
+                // -> reset occurred
+                delta = value;
+            }
+            else {
+                // -> error on detection (ignoring step)
+                return;
+            }
+        } else {
+            // updating value
+            delta = value - oldValue;
+        }
 
         // computing variance over samples
         incrementCounter();
