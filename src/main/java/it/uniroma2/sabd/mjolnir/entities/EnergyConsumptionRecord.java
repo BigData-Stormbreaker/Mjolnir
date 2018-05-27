@@ -21,7 +21,7 @@ public class EnergyConsumptionRecord implements Serializable {
     // house identifier (just for final computation purposes)
     private Integer houseID;
     // plugID
-    private Integer plugID;
+    private String plugID;
 
     public EnergyConsumptionRecord(Integer tag) {
         this.tag = tag;
@@ -87,7 +87,7 @@ public class EnergyConsumptionRecord implements Serializable {
 
     public Integer getHouseID() { return houseID; }
 
-    public void setPlugID(Integer plugID) { this.plugID = plugID; }
+    public void setPlugID(String plugID) { this.plugID = plugID; }
 
-    public Integer getPlugID() { return plugID; }
+    public String getPlugID() { return plugID; }
 }

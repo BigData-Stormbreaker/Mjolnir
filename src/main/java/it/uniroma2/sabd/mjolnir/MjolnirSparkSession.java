@@ -4,13 +4,17 @@ import it.uniroma2.sabd.mjolnir.entities.EnergyConsumptionRecord;
 import it.uniroma2.sabd.mjolnir.entities.SensorRecord;
 import it.uniroma2.sabd.mjolnir.helpers.EnergyConsumption;
 import it.uniroma2.sabd.mjolnir.helpers.InstantPowerComputation;
+import it.uniroma2.sabd.mjolnir.helpers.persistence.RedisHelper;
 import org.apache.spark.SparkConf;
 import org.apache.spark.api.java.JavaPairRDD;
 import org.apache.spark.api.java.JavaRDD;
 import org.apache.spark.api.java.JavaSparkContext;
 import org.apache.spark.api.java.function.Function;
 import org.apache.spark.sql.SparkSession;
+import org.json4s.jackson.Json;
+import redis.clients.jedis.Jedis;
 import scala.Tuple2;
+import org.json.simple.JSONObject;
 
 import static it.uniroma2.sabd.mjolnir.MjolnirConstants.*;
 
@@ -37,7 +41,10 @@ public class MjolnirSparkSession {
         ArrayList<EnergyConsumptionRecord> query2Result = new ArrayList<>();
         ArrayList<JavaRDD<Tuple2<Integer, Double>>> query3Result = new ArrayList<>();
 
-        for(houseID = 0; houseID < 1; houseID++) {
+        RedisHelper redisHelper = new RedisHelper();
+        Jedis redisInstance = redisHelper.getRedisInstance();
+
+        for (houseID = 0; houseID < 1; houseID++) {
 
             // SENSOR RECORDS - no distinction on power/energy
             SampleReader sr = new SampleReader();
@@ -59,8 +66,12 @@ public class MjolnirSparkSession {
             // retrieving houses with instant power consumption more than the given threshold (350W)
             JavaPairRDD<Long, Double> houseInstantOverPowerThreshold = InstantPowerComputation.getHouseThresholdConsumption(powerRecords);
             // adding to house list if some given time the I.P.C. was over threshold
-            if (!houseInstantOverPowerThreshold.isEmpty())
+            if (!houseInstantOverPowerThreshold.isEmpty()) {
                 query1Result.add(houseID);
+                redisInstance.rpush(REDIS_DB_HOUSE_QUERY1, String.valueOf(houseID));
+            }
+
+
 
             // --------------- QUERY 2 ---------------
             for (int j = 0; j < DAY_QUARTER_STARTS.length; j++) {
@@ -72,16 +83,31 @@ public class MjolnirSparkSession {
                 EnergyConsumptionRecord ecr = new EnergyConsumptionRecord(GENERIC_HOURS_TAG);
 
                 ecr.setHouseID(houseID);
+
                 Map<String, EnergyConsumptionRecord> stringEnergyConsumptionRecordMap = energyConsumptionQ.collectAsMap();
 
                 for (Map.Entry<String, EnergyConsumptionRecord> entry : stringEnergyConsumptionRecordMap.entrySet()) {
                     ecr.combineMeasures(ecr, entry.getValue());
                 }
 
+                JSONObject jsonObject = new JSONObject();
+                jsonObject.put("houseID", ecr.getHouseID());
+                jsonObject.put("quarter", DAY_QUARTER_STARTS[j].toString() + "_" + DAY_QUARTER_ENDS[j].toString());
+                jsonObject.put("avgEnergy", ecr.getAvgEnergyConsumption());
+                jsonObject.put("stdDev", ecr.getStandardDeviation());
+
+                redisInstance.rpush(REDIS_DB_HOUSE_QUERY2, jsonObject.toJSONString());
+
                 // updating query results
                 query2Result.add(ecr);
             }
 
+            int j = 0;
+            for (EnergyConsumptionRecord ecr : query2Result) {
+                System.out.print(DAY_QUARTER_STARTS[j] + " to " + DAY_QUARTER_ENDS[j] + " --> ");
+                System.out.println("house" + ecr.getHouseID() + ": " + ecr.getAvgEnergyConsumption() + " " + ecr.getVariance());
+                j++;
+            }
 
             // --------------- QUERY 3 ---------------
             // retrieving rush hour consumptions
@@ -119,6 +145,7 @@ public class MjolnirSparkSession {
             // retrieving rank of plugs
             JavaRDD<Tuple2<Integer, Double>> plugsRankPerHouse = EnergyConsumption.getPlugsRank(sparkSession, energyConsumptionRH, energyConsumptionNRH);
             query3Result.add(plugsRankPerHouse);
+
         }
 
     }

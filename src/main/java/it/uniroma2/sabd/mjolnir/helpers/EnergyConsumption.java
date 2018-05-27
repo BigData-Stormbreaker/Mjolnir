@@ -79,7 +79,7 @@ public class EnergyConsumption {
                         energyConsumptionRecord.addNewValue(sensorRecord.getValue());
                         // plug tagging for further aggregation
                         if (energyConsumptionRecord.getPlugID() == null)
-                            energyConsumptionRecord.setPlugID(sensorRecord.getPlugID());
+                            energyConsumptionRecord.setPlugID(sensorRecord.getHouseholdID().toString() + "_" + sensorRecord.getPlugID().toString());
                         return energyConsumptionRecord;
                     }
                 },

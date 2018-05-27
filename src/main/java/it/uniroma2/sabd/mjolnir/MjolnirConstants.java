@@ -8,13 +8,14 @@ public class MjolnirConstants {
     public static final String MASTER_YARN  = "yarn";
     public static final String MASTER_LOCAL = "local";
 
-    public static final String REDIS_HOST   = "redis://localhost";
+    public static final String REDIS_HOST   = "localhost";
     public static final Integer REDIS_PORT  = 6379;
 
     public static final String REDIS_DB_ROOT             = "mjolnir/results/";
     public static final String REDIS_DB_HOUSE_QUERY1     = "/query1/powerthreshold/json";
     public static final String REDIS_DB_HOUSE_QUERY2_AVG = "/query2/consumptions/avg/json";
     public static final String REDIS_DB_HOUSE_QUERY2_STD = "/query2/consumptions/std/json";
+    public static final String REDIS_DB_HOUSE_QUERY2     = "/query2/consumptions/json";
     public static final String REDIS_DB_HOUSE_QUERY3     = "/query3/plugsrank/json";
     public static final String REDIS_DB_QUERY3           = "/plugsrank/json";
 
