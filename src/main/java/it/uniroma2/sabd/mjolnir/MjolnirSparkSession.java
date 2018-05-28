@@ -18,6 +18,8 @@ import org.json.simple.JSONObject;
 
 import static it.uniroma2.sabd.mjolnir.MjolnirConstants.*;
 
+import java.time.Instant;
+import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.Map;
 
@@ -43,12 +45,24 @@ public class MjolnirSparkSession {
 
         RedisHelper redisHelper = new RedisHelper();
         Jedis redisInstance = redisHelper.getRedisInstance();
+        redisInstance.del(REDIS_DB_HOUSE_QUERY1);
+        redisInstance.del(REDIS_DB_HOUSE_QUERY2);
+
+        // SENSOR RECORDS - no distinction on power/energy
+        SampleReader sr = new SampleReader();
+        JavaRDD<SensorRecord> allSensorRecords = sr.sampleRead(sparkContext, -1);
+
 
         for (houseID = 0; houseID < 1; houseID++) {
 
-            // SENSOR RECORDS - no distinction on power/energy
-            SampleReader sr = new SampleReader();
-            JavaRDD<SensorRecord> sensorRecords = sr.sampleRead(sparkContext, houseID);
+            final Long variable = (long) houseID;
+
+            JavaRDD<SensorRecord> sensorRecords = allSensorRecords.filter(new Function<SensorRecord, Boolean>() {
+                @Override
+                public Boolean call(SensorRecord sensorRecord) throws Exception {
+                    return sensorRecord.getHouseID().equals(variable);
+                }
+            });
 
             // POWER & ENERGY RECORDS RDDs
             JavaRDD<SensorRecord> powerRecords = sensorRecords.filter(new Function<SensorRecord, Boolean>() {
@@ -62,6 +76,8 @@ public class MjolnirSparkSession {
                 }
             });
 
+            System.out.println(powerRecords.first().toString());
+
             // --------------- QUERY 1 ---------------
             // retrieving houses with instant power consumption more than the given threshold (350W)
             JavaPairRDD<Long, Double> houseInstantOverPowerThreshold = InstantPowerComputation.getHouseThresholdConsumption(powerRecords);
@@ -70,7 +86,6 @@ public class MjolnirSparkSession {
                 query1Result.add(houseID);
                 redisInstance.rpush(REDIS_DB_HOUSE_QUERY1, String.valueOf(houseID));
             }
-
 
 
             // --------------- QUERY 2 ---------------

@@ -1,18 +1,24 @@
 package it.uniroma2.sabd.mjolnir;
 
 import it.uniroma2.sabd.mjolnir.entities.SensorRecord;
+import org.apache.arrow.flatbuf.Bool;
 import org.apache.spark.api.java.JavaPairRDD;
 import org.apache.spark.api.java.JavaSparkContext;
 import org.apache.spark.api.java.JavaRDD;
 import org.apache.spark.api.java.function.Function;
 import org.apache.spark.api.java.function.VoidFunction;
+import org.apache.spark.sql.Dataset;
+import org.apache.spark.sql.Row;
 import org.apache.spark.sql.SQLContext;
+import org.apache.spark.sql.SparkSession;
 import org.apache.spark.util.LongAccumulator;
 import org.omg.PortableInterceptor.Interceptor;
 import scala.Int;
 import scala.Serializable;
 
+import java.io.File;
 import java.sql.Timestamp;
+import java.util.List;
 
 public class SampleReader implements Serializable {
 
@@ -39,9 +45,56 @@ public class SampleReader implements Serializable {
                                                    Double.valueOf(fields[2]),   //value - measure
                                                    Integer.valueOf(fields[3]),  //property - cumulative energy
                                                                                 //or power snapshot
-                                                   Integer.valueOf(fields[4]),  //plug_id
-                                                   Integer.valueOf(fields[5]),  //household_id
-                                                   Integer.valueOf(fields[6])); //house_id
+                                                   Long.valueOf(fields[4]),  //plug_id
+                                                   Long.valueOf(fields[5]),  //household_id
+                                                   Long.valueOf(fields[6])); //house_id
+                return sr;
+            }
+        });
+
+        /* DEBUG */
+        final LongAccumulator accumulator = sc.sc().longAccumulator();
+
+        sensorData.foreach(new VoidFunction<SensorRecord>() {
+            public void call(SensorRecord sensorRecord) throws Exception {
+                accumulator.add(1);
+            }
+        });
+
+        System.out.println("TOTAL RECORDS: " + String.valueOf(accumulator.value()));
+
+
+        return sensorData;
+    }
+
+    public JavaRDD<SensorRecord> sampleAvroRead(JavaSparkContext sc, Integer house_id) {
+        SparkSession sparkSession = new SparkSession(sc.sc());
+        sparkSession.conf().set("spark.sql.avro.compression.codec", "snappy");
+        Dataset<Row> load = sparkSession.read()
+                .format("com.databricks.spark.avro")
+                .load("hdfs://localhost:9000/ingestNiFi/file.avro");
+
+        // retrieving data
+        // all data
+//        if (house_id == -1) {
+//
+//            data = sc.textFile(getClass().getClassLoader().getResource("d14_filtered.csv").getPath());
+//        } else { //or per-house data
+//            data = sc.textFile("hdfs://localhost:9000/ingest20/house" + house_id + "/");
+//        }
+
+        // obtaining an RDD of sensor records
+        JavaRDD<SensorRecord> sensorData = load.toJavaRDD().map(new Function<Row, SensorRecord>() {
+            public SensorRecord call(Row row) throws Exception {
+                // splitting csv line
+                SensorRecord sr = new SensorRecord((Long) row.getAs("id"),     //id_record
+                        (Long) row.getAs("timestamp"),     //timestamp
+                        (Double) row.getAs("value"),        //value - measure
+                        (Integer) row.getAs("property"),      //property - cumulative energy
+                        //or power snapshot
+                        (Long) row.getAs("plug_id"),//plug_id
+                        (Long) row.getAs("household_id"),//household_id
+                        (Long) row.getAs("house_id")); //house_id
                 return sr;
             }
         });

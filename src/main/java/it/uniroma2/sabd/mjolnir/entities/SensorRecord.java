@@ -13,11 +13,11 @@ public class SensorRecord implements Serializable {
     private Long timestamp;
     private Double value;
     private Integer property;
-    private Integer plugID;
-    private Integer householdID;
-    private Integer houseID;
+    private Long plugID;
+    private Long householdID;
+    private Long houseID;
 
-    public SensorRecord(Long id, Long timestamp, Double value, Integer property, Integer plugID, Integer householdID, Integer houseID) {
+    public SensorRecord(Long id, Long timestamp, Double value, Integer property, Long plugID, Long householdID, Long houseID) {
         this.id = id;
         this.timestamp = timestamp;
         this.value = value;
@@ -51,27 +51,27 @@ public class SensorRecord implements Serializable {
         this.value = value;
     }
 
-    public Integer getPlugID() {
+    public Long getPlugID() {
         return plugID;
     }
 
-    public void setPlugID(Integer plugID) {
+    public void setPlugID(Long plugID) {
         this.plugID = plugID;
     }
 
-    public Integer getHouseholdID() {
+    public Long getHouseholdID() {
         return householdID;
     }
 
-    public void setHouseholdID(Integer householdID) {
+    public void setHouseholdID(Long householdID) {
         this.householdID = householdID;
     }
 
-    public Integer getHouseID() {
+    public Long getHouseID() {
         return houseID;
     }
 
-    public void setHouseID(Integer houseID) {
+    public void setHouseID(Long houseID) {
         this.houseID = houseID;
     }
 

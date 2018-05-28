@@ -16,18 +16,18 @@ public class InstantPowerComputation implements Serializable {
 
     public InstantPowerComputation(){ }
 
-    public static JavaPairRDD<Long, Iterable<Tuple2<Integer, SensorRecord>>> getSensorRecordsByTimestamp(JavaRDD<SensorRecord> powerRecords) {
+    public static JavaPairRDD<Long, Iterable<Tuple2<Long, SensorRecord>>> getSensorRecordsByTimestamp(JavaRDD<SensorRecord> powerRecords) {
         // retrieving sensors records by timestamp
-        JavaPairRDD<Long, Iterable<Tuple2<Integer, SensorRecord>>> houseInstantPowerRecordsByTime = powerRecords.keyBy(new Function<SensorRecord, Long>() {
+        JavaPairRDD<Long, Iterable<Tuple2<Long, SensorRecord>>> houseInstantPowerRecordsByTime = powerRecords.keyBy(new Function<SensorRecord, Long>() {
             // -> key by timestamp
             @Override
             public Long call(SensorRecord instantPowerRecord) throws Exception {
                 return instantPowerRecord.getTimestamp();
             }
-        }).mapValues(new Function<SensorRecord, Tuple2<Integer, SensorRecord>>() {
+        }).mapValues(new Function<SensorRecord, Tuple2<Long, SensorRecord>>() {
             // -> computing <house_id, record>
             @Override
-            public Tuple2<Integer, SensorRecord> call(SensorRecord instantPowerRecord) throws Exception {
+            public Tuple2<Long, SensorRecord> call(SensorRecord instantPowerRecord) throws Exception {
                 return new Tuple2<>(instantPowerRecord.getHouseID(), instantPowerRecord);
             }
         }).groupByKey(); // -> retrieving an iterable per timestamp with all the house sensor records

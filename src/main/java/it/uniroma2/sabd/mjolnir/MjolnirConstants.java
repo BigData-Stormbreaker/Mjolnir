@@ -1,5 +1,7 @@
 package it.uniroma2.sabd.mjolnir;
 
+import org.apache.arrow.flatbuf.Bool;
+
 import java.util.ArrayList;
 
 public class MjolnirConstants {
