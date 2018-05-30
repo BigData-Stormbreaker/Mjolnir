@@ -179,6 +179,7 @@ public class EnergyConsumption {
             @Override
             public EnergyConsumptionRecord call(EnergyConsumptionRecord energyConsumptionRecord, EnergyConsumptionRecord energyConsumptionRecord2) throws Exception {
                 EnergyConsumptionRecord ecr = new EnergyConsumptionRecord(rushHoursTag);
+                ecr.setPlugID(energyConsumptionRecord.getPlugID());
                 ecr.combineMeasures(energyConsumptionRecord, energyConsumptionRecord2);
                 return ecr;
             }
