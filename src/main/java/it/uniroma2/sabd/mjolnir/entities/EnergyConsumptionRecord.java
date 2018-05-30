@@ -50,8 +50,11 @@ public class EnergyConsumptionRecord implements Serializable {
             consumption += (value - oldValue);
 //            System.out.println("Allora aumento consumption di " + (value - oldValue));
 //            System.out.println("ora consumption vale " + consumption);
+        } else if (value <= RESET_THRESHOLD_MULTIPLIER * oldValue) {
+           return;
         }
         oldValue = value;
+
 //        System.out.println("infine oldValue = " + oldValue);
     }
 
@@ -61,8 +64,8 @@ public class EnergyConsumptionRecord implements Serializable {
 
     public Double getConsumption() {return consumption;}
 
-    public Double getAvgEnergyConsumption() {
-        return consumption / 30;
+    public Double getAvgEnergyConsumption(int timespan) {
+        return consumption / timespan;
     }
 
     public Double getVariance() {

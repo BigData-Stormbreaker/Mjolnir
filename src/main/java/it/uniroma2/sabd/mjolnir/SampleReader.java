@@ -22,7 +22,8 @@ import java.util.List;
 
 public class SampleReader implements Serializable {
 
-    public SampleReader() {}
+    public SampleReader() {
+    }
 
     public JavaRDD<SensorRecord> sampleRead(JavaSparkContext sc, Integer house_id) {
 
@@ -41,13 +42,13 @@ public class SampleReader implements Serializable {
                 // splitting csv line
                 String[] fields = line.split(",");
                 SensorRecord sr = new SensorRecord(Long.valueOf(fields[0]),     //id_record
-                                                   Long.valueOf(fields[1]),     //timestamp
-                                                   Double.valueOf(fields[2]),   //value - measure
-                                                   Integer.valueOf(fields[3]),  //property - cumulative energy
-                                                                                //or power snapshot
-                                                   Long.valueOf(fields[4]),  //plug_id
-                                                   Long.valueOf(fields[5]),  //household_id
-                                                   Long.valueOf(fields[6])); //house_id
+                        Long.valueOf(fields[1]),     //timestamp
+                        Double.valueOf(fields[2]),   //value - measure
+                        Integer.valueOf(fields[3]),  //property - cumulative energy
+                        //or power snapshot
+                        Long.valueOf(fields[4]),     //plug_id
+                        Long.valueOf(fields[5]),     //household_id
+                        Long.valueOf(fields[6]));    //house_id
                 return sr;
             }
         });
@@ -67,15 +68,29 @@ public class SampleReader implements Serializable {
         return sensorData;
     }
 
-    public JavaRDD<SensorRecord> sampleAvroRead(JavaSparkContext sc, Integer house_id) {
-        SparkSession sparkSession = new SparkSession(sc.sc());
-        sparkSession.conf().set("spark.sql.avro.compression.codec", "snappy");
-        Dataset<Row> load = sparkSession.read()
-                .format("com.databricks.spark.avro")
-                .load("hdfs://localhost:9000/ingestNiFi/file.avro");
+    public JavaRDD<SensorRecord> sampleAvroRead(JavaSparkContext sc, String hdfsAddress, Integer house_id) {
 
         // retrieving data
         // all data
+        SparkSession sparkSession = new SparkSession(sc.sc());
+        sparkSession.conf().set("spark.sql.avro.compression.codec", "snappy");
+
+
+        // retrieving data
+        // per-house data
+        Dataset<Row> load = null;
+        if (house_id != -1) {
+            load = sparkSession.read()
+                    .format("com.databricks.spark.avro")
+                    .load("hdfs://" + hdfsAddress + "/ingestNiFi/house" + house_id + "/d14_filtered.csv");
+        // all data
+        } else {
+            load = sparkSession.read()
+                    .format("com.databricks.spark.avro")
+                    .load("hdfs://" + hdfsAddress + "/ingestNiFi/d14_filtered.csv");
+        }
+
+
 //        if (house_id == -1) {
 //
 //            data = sc.textFile(getClass().getClassLoader().getResource("d14_filtered.csv").getPath());

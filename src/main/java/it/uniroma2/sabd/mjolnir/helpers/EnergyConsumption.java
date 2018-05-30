@@ -129,8 +129,9 @@ public class EnergyConsumption {
             @Override
             public Double call(Tuple2<EnergyConsumptionRecord, EnergyConsumptionRecord> recordsTuple) throws Exception {
                 // returning difference by rush / no rush hours consumption
-                Double rushValue   = (recordsTuple._1.getTag().equals(RUSH_HOURS_TAG)) ? recordsTuple._1.getAvgEnergyConsumption() : recordsTuple._2.getAvgEnergyConsumption();
-                Double noRushValue = (recordsTuple._1.getTag().equals(NO_RUSH_HOURS_TAG)) ? recordsTuple._1.getAvgEnergyConsumption() : recordsTuple._2.getAvgEnergyConsumption();
+                // TODO rush hour days are less than no rush hour days
+                Double rushValue   = (recordsTuple._1.getTag().equals(RUSH_HOURS_TAG)) ? recordsTuple._1.getAvgEnergyConsumption(30) : recordsTuple._2.getAvgEnergyConsumption(30);
+                Double noRushValue = (recordsTuple._1.getTag().equals(NO_RUSH_HOURS_TAG)) ? recordsTuple._1.getAvgEnergyConsumption(30) : recordsTuple._2.getAvgEnergyConsumption(30);
                 return rushValue - noRushValue;
             }
         });
@@ -207,7 +208,7 @@ public class EnergyConsumption {
                 ecr.combineMeasures(ecr, energyConsumptionDayPerQ.get(j).get(i));
             }
             averageConsumptionsRecords.add(ecr);
-            mean = ecr.getAvgEnergyConsumption();
+            mean = ecr.getAvgEnergyConsumption(30);
             System.out.print("avgEnergy = " + mean + " in the quarter " + j);
             sum = 0.0;
             for (int i = 0; i < monthDays; i++) {

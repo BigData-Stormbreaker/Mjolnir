@@ -37,20 +37,8 @@ public class MjolnirConstants {
     public static final Integer[] DAY_QUARTER_STARTS = {0, 6, 12, 18};
     public static final Integer[] DAY_QUARTER_ENDS   = {6, 12, 18, 24};
 
-    public static final Integer RUSH_HOURS_START_H = 6;
-    public static final Integer RUSH_HOURS_END_H   = 18;
-    public static final Integer RUSH_HOURS_START_D = 1;
-    public static final Integer RUSH_HOURS_END_D   = 5;
+    public static final Integer HOUSE_NUMBER = 10;
 
-    public static final Integer NO_RUSH_HOURS_START_H_1   = 0;
-    public static final Integer NO_RUSH_HOURS_END_H_1     = 6;
-    public static final Integer NO_RUSH_HOURS_START_H_2   = 18;
-    public static final Integer NO_RUSH_HOURS_END_H_2     = 24;
-    public static final Integer NO_RUSH_HOURS_START_D   = 1;
-    public static final Integer NO_RUSH_HOURS_END_D     = 5;
-
-    public static final Integer NO_RUSH_WEEKEND_START_H = 0;
-    public static final Integer NO_RUSH_WEEKEND_END_H   = 24;
     public static final Integer NO_RUSH_WEEKEND_START_D = 6;
     public static final Integer NO_RUSH_WEEKEND_END_D   = 7;
 

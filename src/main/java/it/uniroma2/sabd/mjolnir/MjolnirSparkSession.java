@@ -4,11 +4,13 @@ import it.uniroma2.sabd.mjolnir.entities.EnergyConsumptionRecord;
 import it.uniroma2.sabd.mjolnir.entities.SensorRecord;
 import it.uniroma2.sabd.mjolnir.helpers.EnergyConsumption;
 import it.uniroma2.sabd.mjolnir.helpers.InstantPowerComputation;
+import org.apache.hadoop.util.hash.Hash;
 import org.apache.spark.SparkConf;
 import org.apache.spark.api.java.JavaPairRDD;
 import org.apache.spark.api.java.JavaRDD;
 import org.apache.spark.api.java.JavaSparkContext;
 import org.apache.spark.api.java.function.Function;
+import org.apache.spark.api.java.function.Function2;
 import org.apache.spark.sql.SparkSession;
 import scala.Tuple2;
 
@@ -19,11 +21,32 @@ import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.Iterator;
 import java.util.Map;
 
 
 public class MjolnirSparkSession {
+
+    private static String hdfsAddress;
+    private static Integer houseId = -1;
+
     public static void main(String[] args) {
+
+        String[] pair;
+        for (String arg : args) {
+            pair = arg.split("=");
+            if (pair[0].equals("hdfs")) {
+                hdfsAddress = pair[1];
+            }
+            if (pair[0].equals("houseid")) {
+                houseId = Integer.valueOf(pair[1]);
+            }
+        }
+
+        if (hdfsAddress == null) {
+            System.err.println("hdfsAddress is missing");
+            System.exit(-1);
+        }
 
         // preparing spark configuration
         SparkConf conf = new SparkConf()
@@ -44,19 +67,32 @@ public class MjolnirSparkSession {
 
         // SENSOR RECORDS - no distinction on power/energy
         SampleReader sr = new SampleReader();
-        JavaRDD<SensorRecord> allSensorRecords = sr.sampleRead(sparkContext, 0);
-//        JavaRDD<SensorRecord> allSensorRecords = sr.sampleAvroRead(sparkContext, 0);
+//        JavaRDD<SensorRecord> allSensorRecords = sr.sampleRead(sparkContext, 0);
+        JavaRDD<SensorRecord> allSensorRecords = sr.sampleAvroRead(sparkContext, hdfsAddress, houseId);
 
-        for (houseID = 0; houseID < 1; houseID++) {
+        int maxHouse = HOUSE_NUMBER;
 
-            final Long variable = (long) houseID;
+        if (houseId != -1) {
+            maxHouse = 1;
+        }
 
-            JavaRDD<SensorRecord> sensorRecords = allSensorRecords.filter(new Function<SensorRecord, Boolean>() {
-                @Override
-                public Boolean call(SensorRecord sensorRecord) throws Exception {
-                    return sensorRecord.getHouseID().equals(variable);
-                }
-            });
+        for (houseID = 0; houseID < maxHouse; houseID++) {
+
+            JavaRDD<SensorRecord> sensorRecords;
+
+            final Long finalHouseID = (long) houseID;
+
+            if (houseID == -1) {
+
+                sensorRecords = allSensorRecords.filter(new Function<SensorRecord, Boolean>() {
+                    @Override
+                    public Boolean call(SensorRecord sensorRecord) throws Exception {
+                        return sensorRecord.getHouseID().equals(finalHouseID);
+                    }
+                });
+            } else {
+                sensorRecords = allSensorRecords;
+            }
 
             System.out.println(sensorRecords.count());
 
