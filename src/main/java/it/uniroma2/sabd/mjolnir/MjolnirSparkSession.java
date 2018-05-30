@@ -4,6 +4,7 @@ import it.uniroma2.sabd.mjolnir.entities.EnergyConsumptionRecord;
 import it.uniroma2.sabd.mjolnir.entities.SensorRecord;
 import it.uniroma2.sabd.mjolnir.helpers.EnergyConsumption;
 import it.uniroma2.sabd.mjolnir.helpers.InstantPowerComputation;
+import org.apache.hadoop.util.hash.Hash;
 import org.apache.spark.SparkConf;
 import org.apache.spark.api.java.JavaPairRDD;
 import org.apache.spark.api.java.JavaRDD;
@@ -19,6 +20,7 @@ import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.Iterator;
 import java.util.Map;
 
 
@@ -57,6 +59,8 @@ public class MjolnirSparkSession {
                 }
             });
 
+            System.out.println(sensorRecords.count());
+
             // POWER & ENERGY RECORDS RDDs
             JavaRDD<SensorRecord> powerRecords = sensorRecords.filter(new Function<SensorRecord, Boolean>() {
                 public Boolean call(SensorRecord sensorRecord) throws Exception {
@@ -82,6 +86,7 @@ public class MjolnirSparkSession {
 
             // energy consumption records per house
             HashMap<Integer, ArrayList<EnergyConsumptionRecord>> energyConsumptionDayQ = new HashMap<>();
+
             for (int j = 0; j < DAY_QUARTER_STARTS.length; j++)
                 energyConsumptionDayQ.put(j, new ArrayList<>());
 
@@ -123,7 +128,11 @@ public class MjolnirSparkSession {
                     Map<String, EnergyConsumptionRecord> stringEnergyConsumptionRecordMap = energyConsumptionQ.collectAsMap();
                     for (Map.Entry<String, EnergyConsumptionRecord> entry : stringEnergyConsumptionRecordMap.entrySet()) {
                         // updating energy consumption record
+                        System.out.println(entry.getKey() + " has consumed: " + entry.getValue().getConsumption() +
+                                " in the day " + localDate.getDayOfMonth() +
+                                " in the quarter " + j);
                         ecr.combineMeasures(ecr, entry.getValue());
+                        System.out.println("So now the total consumption is: " + ecr.getConsumption());
                         // storing record for further analysis
                         EnergyConsumptionRecord record = entry.getValue();
                         record.setPlugID(entry.getKey());
@@ -146,6 +155,20 @@ public class MjolnirSparkSession {
 
             // --------------- QUERY 2 ---------------
             query2Result.put(houseID, EnergyConsumption.getAverageAndStdDeviation(energyConsumptionDayQ, monthDays));
+//            Iterator it = query2Result.entrySet().iterator();
+//            while (it.hasNext()) {
+//                HashMap.Entry pair = (HashMap.Entry)it.next();
+//                System.out.println(pair.getKey());
+//                for (EnergyConsumptionRecord ecr : (ArrayList<EnergyConsumptionRecord>) pair.getValue()) {
+//                    System.out.println(ecr.getAvgEnergyConsumption() + " " + ecr.getStandardDeviation());
+//                }
+//                it.remove(); // avoids a ConcurrentModificationException
+//            }
+//
+//            System.out.println(query2Result.get(0).get(0).getAvgEnergyConsumption());
+//            System.out.println(query2Result.get(0).get(1).getAvgEnergyConsumption());
+//            System.out.println(query2Result.get(0).get(2).getAvgEnergyConsumption());
+//            System.out.println(query2Result.get(0).get(3).getAvgEnergyConsumption());
 
 
             // --------------- QUERY 3 ---------------

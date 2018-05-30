@@ -100,10 +100,12 @@ public class EnergyConsumption {
                     @Override
                     public EnergyConsumptionRecord call(EnergyConsumptionRecord energyConsumptionRecord, SensorRecord sensorRecord) throws Exception {
                         // --> update step
+//                        System.out.println("Plug " + sensorRecord.getPlugID() +" aggiunge il valore " + sensorRecord.getValue());
                         energyConsumptionRecord.addNewValue(sensorRecord.getValue());
                         // plug tagging for further aggregation
                         if (energyConsumptionRecord.getPlugID() == null)
                             energyConsumptionRecord.setPlugID(sensorRecord.getHouseholdID().toString() + "_" + sensorRecord.getPlugID().toString());
+//                        System.out.println("Ora il consumo è " + energyConsumptionRecord.getConsumption());
                         return energyConsumptionRecord;
                     }
                 },
@@ -190,6 +192,10 @@ public class EnergyConsumption {
 
         ArrayList<EnergyConsumptionRecord> averageConsumptionsRecords = new ArrayList<>();
 
+        Double stdDev;
+        Double mean;
+        Double sum = 0.0;
+
         // per quarter statistics
         for (int j = 0; j < DAY_QUARTER_STARTS.length; j++) {
             // combining over the entire month
@@ -198,6 +204,14 @@ public class EnergyConsumption {
                 ecr.combineMeasures(ecr, energyConsumptionDayPerQ.get(j).get(i));
             }
             averageConsumptionsRecords.add(ecr);
+            mean = ecr.getAvgEnergyConsumption();
+            System.out.print("avgEnergy = " + mean + " in the quarter " + j);
+            for (int i = 0; i < monthDays; i++) {
+                sum += Math.pow(energyConsumptionDayPerQ.get(j).get(i).getConsumption() - mean, 2.0);
+            }
+            stdDev = Math.sqrt(sum / 30);
+            System.out.println(" and stdDev = " + stdDev);
+
         }
 
         return averageConsumptionsRecords;
