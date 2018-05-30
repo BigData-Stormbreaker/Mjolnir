@@ -129,8 +129,8 @@ public class EnergyConsumption {
             @Override
             public Double call(Tuple2<EnergyConsumptionRecord, EnergyConsumptionRecord> recordsTuple) throws Exception {
                 // returning difference by rush / no rush hours consumption
-                Double rushValue   = (recordsTuple._1.getTag().equals(RUSH_HOURS_TAG)) ? recordsTuple._1.getConsumption() : recordsTuple._2.getConsumption();
-                Double noRushValue = (recordsTuple._1.getTag().equals(NO_RUSH_HOURS_TAG)) ? recordsTuple._1.getConsumption() : recordsTuple._2.getConsumption();
+                Double rushValue   = (recordsTuple._1.getTag().equals(RUSH_HOURS_TAG)) ? recordsTuple._1.getAvgEnergyConsumption() : recordsTuple._2.getAvgEnergyConsumption();
+                Double noRushValue = (recordsTuple._1.getTag().equals(NO_RUSH_HOURS_TAG)) ? recordsTuple._1.getAvgEnergyConsumption() : recordsTuple._2.getAvgEnergyConsumption();
                 return rushValue - noRushValue;
             }
         });
@@ -170,6 +170,7 @@ public class EnergyConsumption {
 
 
     public static Map<String, EnergyConsumptionRecord> getMapPlugAvgConsumptionDay(JavaSparkContext sparkContext, ArrayList<EnergyConsumptionRecord> energyConsumptionRecordsRHQuarter, Integer rushHoursTag) {
+
         Map<String, EnergyConsumptionRecord> map = sparkContext.parallelize(energyConsumptionRecordsRHQuarter).keyBy(new Function<EnergyConsumptionRecord, String>() {
             @Override
             public String call(EnergyConsumptionRecord energyConsumptionRecord) throws Exception {

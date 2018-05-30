@@ -10,6 +10,7 @@ import org.apache.spark.api.java.JavaPairRDD;
 import org.apache.spark.api.java.JavaRDD;
 import org.apache.spark.api.java.JavaSparkContext;
 import org.apache.spark.api.java.function.Function;
+import org.apache.spark.api.java.function.Function2;
 import org.apache.spark.sql.SparkSession;
 import scala.Tuple2;
 
@@ -181,12 +182,26 @@ public class MjolnirSparkSession {
                 public String call(EnergyConsumptionRecord energyConsumptionRecord) throws Exception {
                     return energyConsumptionRecord.getPlugID();
                 }
+            }).reduceByKey(new Function2<EnergyConsumptionRecord, EnergyConsumptionRecord, EnergyConsumptionRecord>() {
+                @Override
+                public EnergyConsumptionRecord call(EnergyConsumptionRecord energyConsumptionRecord, EnergyConsumptionRecord energyConsumptionRecord2) throws Exception {
+                    EnergyConsumptionRecord ecr = new EnergyConsumptionRecord(RUSH_HOURS_TAG);
+                    ecr.combineMeasures(energyConsumptionRecord, energyConsumptionRecord2);
+                    return ecr;
+                }
             });
 
             JavaPairRDD<String, EnergyConsumptionRecord> noRushHoursRecords = sparkContext.parallelize(energyConsumptionDayNoRushHours).keyBy(new Function<EnergyConsumptionRecord, String>() {
                 @Override
                 public String call(EnergyConsumptionRecord energyConsumptionRecord) throws Exception {
                     return energyConsumptionRecord.getPlugID();
+                }
+            }).reduceByKey(new Function2<EnergyConsumptionRecord, EnergyConsumptionRecord, EnergyConsumptionRecord>() {
+                @Override
+                public EnergyConsumptionRecord call(EnergyConsumptionRecord energyConsumptionRecord, EnergyConsumptionRecord energyConsumptionRecord2) throws Exception {
+                    EnergyConsumptionRecord ecr = new EnergyConsumptionRecord(NO_RUSH_HOURS_TAG);
+                    ecr.combineMeasures(energyConsumptionRecord, energyConsumptionRecord2);
+                    return ecr;
                 }
             });
 
