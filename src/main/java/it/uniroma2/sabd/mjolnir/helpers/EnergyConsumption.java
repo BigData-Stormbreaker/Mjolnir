@@ -200,7 +200,10 @@ public class EnergyConsumption {
         for (int j = 0; j < DAY_QUARTER_STARTS.length; j++) {
             // combining over the entire month
             EnergyConsumptionRecord ecr = new EnergyConsumptionRecord(GENERIC_HOURS_TAG);
+            System.out.println("In the quarter " + j + " we have:");
             for (int i = 0; i < monthDays; i++) {
+//                System.out.println("In the quarter " + j + " of the day " + (i + 1) + " the house has consumed ");
+                System.out.println(energyConsumptionDayPerQ.get(j).get(i).getConsumption() + ",");
                 ecr.combineMeasures(ecr, energyConsumptionDayPerQ.get(j).get(i));
             }
             averageConsumptionsRecords.add(ecr);
@@ -209,7 +212,7 @@ public class EnergyConsumption {
             for (int i = 0; i < monthDays; i++) {
                 sum += Math.pow(energyConsumptionDayPerQ.get(j).get(i).getConsumption() - mean, 2.0);
             }
-            stdDev = Math.sqrt(sum / 30);
+            stdDev = Math.sqrt(sum / 30.0);
             System.out.println(" and stdDev = " + stdDev);
 
         }

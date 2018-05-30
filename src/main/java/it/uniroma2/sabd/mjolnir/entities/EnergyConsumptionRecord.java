@@ -6,18 +6,18 @@ import static it.uniroma2.sabd.mjolnir.MjolnirConstants.RESET_THRESHOLD_MULTIPLI
 
 public class EnergyConsumptionRecord implements Serializable {
 
-    private Double minEnergy = null;
-    private Double maxEnergy = null;
+    //    private Double minEnergy = null;
+//    private Double maxEnergy = null;
     private Double oldValue = 0.0;
 
     // aux parameter to compute variance over samples
     private Integer counter = 0;
-//    private Double M = 0.0;
+    //    private Double M = 0.0;
     private Double S = 0.0;
 
     private Double consumption = 0.0;
 
-    private Boolean reset = Boolean.FALSE;
+    private Integer start = 0;
 
     // tag value to keep trace of rush hours consumptions
     private Integer tag;
@@ -34,52 +34,28 @@ public class EnergyConsumptionRecord implements Serializable {
 
     public void addNewValue(Double value) {
 
-//        Double delta;
-
         // evaluating if an anomaly occurred
-        if (value < oldValue) {
-            if (value <= RESET_THRESHOLD_MULTIPLIER * oldValue) {
-                // -> reset occurred
-//                delta = value;
-                oldValue = value;
-                reset = Boolean.TRUE;
-            }
-            else {
-                // -> error on detection (ignoring step)
-                return;
-            }
-        } else {
-            if (maxEnergy == null) {
-                maxEnergy = value;
-                minEnergy = value;
-            }
-            // updating value
-            // delta = value - oldValue;
-            if (value > maxEnergy) {
-                maxEnergy = value;
-            }
-            if (value < minEnergy) {
-                minEnergy = value;
-            }
 
-            consumption = maxEnergy - minEnergy;
-            incrementCounter();
+//        System.out.println("Arriva " + value);
+        if (start == 0) {
+//            System.out.println("E' il primo recordo, quindi");
+            oldValue = value;
+//            System.out.println("oldValue diventa " + oldValue);
+            start = 1;
         }
 
-        // computing variance over samples
-//        incrementCounter();
-//        Double oldM = M;
-//        M = M + (delta - M) / counter;
-//        S = S + (delta - M) * (delta - oldM);
-//
-//        oldValue = value;
+        if (value > oldValue) {
+//            System.out.println("value " + value + " è maggiore di " + oldValue);
+            // -> reset occurred
+            consumption += (value - oldValue);
+//            System.out.println("Allora aumento consumption di " + (value - oldValue));
+//            System.out.println("ora consumption vale " + consumption);
+        }
+        oldValue = value;
+//        System.out.println("infine oldValue = " + oldValue);
     }
 
     public void combineMeasures(EnergyConsumptionRecord r1, EnergyConsumptionRecord r2) {
-        // combining S and aux variables
-//        counter = r1.getCounter() + r2.getCounter();
-//        M = (r1.getCounter() * r1.getAvgEnergyConsumption() + r2.getCounter() * r2.getAvgEnergyConsumption());
-//        S = (r1.getCounter() * (r1.getVariance() + Math.pow(r1.getAvgEnergyConsumption() - M/counter, 2.0)) + r2.getCounter() * (r2.getVariance() + Math.pow(r2.getAvgEnergyConsumption() - M/counter, 2.0)));
         consumption = r1.getConsumption() + r2.getConsumption();
     }
 
