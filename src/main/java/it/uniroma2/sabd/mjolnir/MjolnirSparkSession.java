@@ -34,6 +34,7 @@ public class MjolnirSparkSession {
 
         // retrieving spark context
         JavaSparkContext sparkContext = new JavaSparkContext(conf);
+        sparkContext.hadoopConfiguration().set("avro.mapred.ignore.inputs.without.extension", "false");
 
         // retrieving spark session
         SparkSession sparkSession = new SparkSession(sparkContext.sc());
@@ -46,7 +47,7 @@ public class MjolnirSparkSession {
         // SENSOR RECORDS - no distinction on power/energy
         SampleReader sr = new SampleReader();
         JavaRDD<SensorRecord> allSensorRecords = sr.sampleRead(sparkContext, 0);
-
+//        JavaRDD<SensorRecord> allSensorRecords = sr.sampleAvroRead(sparkContext, 0);
 
         for (houseID = 0; houseID < 1; houseID++) {
 
@@ -105,15 +106,15 @@ public class MjolnirSparkSession {
                 JavaRDD<SensorRecord> energyRecordsDay = EnergyConsumption.getEnergyRecordsPerDay(energyRecords, d, d + SECONDS_PER_DAY);
 
                 // initializing aux variables to compute avg diff on rush and not rush hours
-                ArrayList<EnergyConsumptionRecord> energyConsumptionRecordsRHDay  = new ArrayList<>();
-                ArrayList<EnergyConsumptionRecord> energyConsumptionRecordsNRHDay = new ArrayList<>();
+                ArrayList<EnergyConsumptionRecord> energyConsumptionRecordsRHQuarter  = new ArrayList<>();
+                ArrayList<EnergyConsumptionRecord> energyConsumptionRecordsNRHQuarter = new ArrayList<>();
 
                 // iterating over day quarters
                 for (int j = 0; j < DAY_QUARTER_STARTS.length; j++) {
 
                     // preparing consumption tag
                     Integer tag = null;
-                    if ((NO_RUSH_WEEKEND_START_D <= localDate.getDayOfWeek().getValue() || localDate.getDayOfWeek().getValue() <= NO_RUSH_WEEKEND_END_D) || (j == 0 || j == 3))
+                    if ((NO_RUSH_WEEKEND_START_D <= localDate.getDayOfWeek().getValue() && localDate.getDayOfWeek().getValue() <= NO_RUSH_WEEKEND_END_D) || (j == 0 || j == 3))
                         tag = NO_RUSH_HOURS_TAG;
                     else
                         tag = RUSH_HOURS_TAG;
@@ -135,22 +136,38 @@ public class MjolnirSparkSession {
                         // storing record for further analysis
                         EnergyConsumptionRecord record = entry.getValue();
                         record.setPlugID(entry.getKey());
-                        if (tag.equals(RUSH_HOURS_TAG))
-                            energyConsumptionRecordsRHDay.add(record);
-                        if (tag.equals(NO_RUSH_HOURS_TAG))
-                            energyConsumptionRecordsNRHDay.add(record);
                     }
+                    if (tag.equals(RUSH_HOURS_TAG))
+                        energyConsumptionRecordsRHQuarter.add(ecr);
+                    if (tag.equals(NO_RUSH_HOURS_TAG))
+                        energyConsumptionRecordsNRHQuarter.add(ecr);
                     System.out.println("So the total consumption is: " + ecr.getConsumption());
 
                     // updating quarters values (query2)
                     energyConsumptionDayQ.get(j).add(ecr);
                 }
 
+                System.out.println("Fine dei quarter del giorno " + localDate.getDayOfMonth() + " che è un " + localDate.getDayOfWeek().getValue() + ":");
+                System.out.println("energyConsumptionRecordsRHQuarter ha " + energyConsumptionRecordsRHQuarter.size() + " record");
+                System.out.println("energyConsumptionRecordsNRHQuarter ha " + energyConsumptionRecordsNRHQuarter.size() + " record");
+
                 // updating day values (query3)
-                for (Map.Entry<String, EnergyConsumptionRecord> entry : EnergyConsumption.getMapPlugAvgConsumptionDay(sparkContext, energyConsumptionRecordsRHDay, RUSH_HOURS_TAG).entrySet())
+                for (Map.Entry<String, EnergyConsumptionRecord> entry : EnergyConsumption.getMapPlugAvgConsumptionDay(sparkContext, energyConsumptionRecordsRHQuarter, RUSH_HOURS_TAG).entrySet())
                     energyConsumptionDayRushHours.add(entry.getValue());
-                for (Map.Entry<String, EnergyConsumptionRecord> entry : EnergyConsumption.getMapPlugAvgConsumptionDay(sparkContext, energyConsumptionRecordsNRHDay, NO_RUSH_HOURS_TAG).entrySet())
+                for (Map.Entry<String, EnergyConsumptionRecord> entry : EnergyConsumption.getMapPlugAvgConsumptionDay(sparkContext, energyConsumptionRecordsNRHQuarter, NO_RUSH_HOURS_TAG).entrySet())
                     energyConsumptionDayNoRushHours.add(entry.getValue());
+
+                System.out.println("Consumi orari di punta");
+                System.out.println("Ci sono " + energyConsumptionDayRushHours.size() + " elementi");
+                for (EnergyConsumptionRecord ecr : energyConsumptionDayRushHours) {
+                    System.out.println("Plug: " + ecr.getPlugID() + " = " + ecr.getConsumption());
+                }
+
+                System.out.println("Consumi orari non di punta");
+                System.out.println("Ci sono " + energyConsumptionDayNoRushHours.size() + " elementi");
+                for (EnergyConsumptionRecord ecr : energyConsumptionDayNoRushHours) {
+                    System.out.println("Plug: " + ecr.getPlugID() + " = " + ecr.getConsumption());
+                }
             }
 
             // --------------- QUERY 2 ---------------
