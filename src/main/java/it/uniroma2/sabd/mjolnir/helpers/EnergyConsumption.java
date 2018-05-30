@@ -155,7 +155,6 @@ public class EnergyConsumption {
 
         // -> applying schema to RDD
         Dataset<Row> plugsDataset = sparkSession.createDataFrame(plugsRows, schema);
-        plugsDataset.show();
         // -> ranking and returning the result
         return plugsDataset.orderBy(desc("value"))
                 .toJavaRDD()
@@ -169,9 +168,9 @@ public class EnergyConsumption {
     }
 
 
-    public static Map<String, EnergyConsumptionRecord> getMapPlugAvgConsumptionDay(JavaSparkContext sparkContext, ArrayList<EnergyConsumptionRecord> energyConsumptionRecordsRHQuarter, Integer rushHoursTag) {
+    public static JavaPairRDD<String, EnergyConsumptionRecord> combinePlugConsumptions(JavaSparkContext sparkContext, ArrayList<EnergyConsumptionRecord> energyConsumptionRecordsRHQuarter, Integer rushHoursTag) {
 
-        Map<String, EnergyConsumptionRecord> map = sparkContext.parallelize(energyConsumptionRecordsRHQuarter).keyBy(new Function<EnergyConsumptionRecord, String>() {
+        return sparkContext.parallelize(energyConsumptionRecordsRHQuarter).keyBy(new Function<EnergyConsumptionRecord, String>() {
             @Override
             public String call(EnergyConsumptionRecord energyConsumptionRecord) throws Exception {
                 return energyConsumptionRecord.getPlugID();
@@ -184,9 +183,8 @@ public class EnergyConsumption {
                 ecr.combineMeasures(energyConsumptionRecord, energyConsumptionRecord2);
                 return ecr;
             }
-        }).collectAsMap();
+        });
 
-        return map;
     }
 
 

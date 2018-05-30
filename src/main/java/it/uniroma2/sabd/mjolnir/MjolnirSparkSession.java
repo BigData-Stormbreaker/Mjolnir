@@ -4,13 +4,11 @@ import it.uniroma2.sabd.mjolnir.entities.EnergyConsumptionRecord;
 import it.uniroma2.sabd.mjolnir.entities.SensorRecord;
 import it.uniroma2.sabd.mjolnir.helpers.EnergyConsumption;
 import it.uniroma2.sabd.mjolnir.helpers.InstantPowerComputation;
-import org.apache.hadoop.util.hash.Hash;
 import org.apache.spark.SparkConf;
 import org.apache.spark.api.java.JavaPairRDD;
 import org.apache.spark.api.java.JavaRDD;
 import org.apache.spark.api.java.JavaSparkContext;
 import org.apache.spark.api.java.function.Function;
-import org.apache.spark.api.java.function.Function2;
 import org.apache.spark.sql.SparkSession;
 import scala.Tuple2;
 
@@ -21,7 +19,6 @@ import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.Iterator;
 import java.util.Map;
 
 
@@ -154,9 +151,9 @@ public class MjolnirSparkSession {
                 System.out.println("energyConsumptionRecordsPerPlugNRHQuarter ha " + energyConsumptionRecordsPerPlugNRHQuarter.size() + " record");
 
                 // updating day values (query3)
-                for (Map.Entry<String, EnergyConsumptionRecord> entry : EnergyConsumption.getMapPlugAvgConsumptionDay(sparkContext, energyConsumptionRecordsPerPlugRHQuarter, RUSH_HOURS_TAG).entrySet())
+                for (Map.Entry<String, EnergyConsumptionRecord> entry : EnergyConsumption.combinePlugConsumptions(sparkContext, energyConsumptionRecordsPerPlugRHQuarter, RUSH_HOURS_TAG).collectAsMap().entrySet())
                     energyConsumptionDayRushHours.add(entry.getValue());
-                for (Map.Entry<String, EnergyConsumptionRecord> entry : EnergyConsumption.getMapPlugAvgConsumptionDay(sparkContext, energyConsumptionRecordsPerPlugNRHQuarter, NO_RUSH_HOURS_TAG).entrySet())
+                for (Map.Entry<String, EnergyConsumptionRecord> entry : EnergyConsumption.combinePlugConsumptions(sparkContext, energyConsumptionRecordsPerPlugNRHQuarter, NO_RUSH_HOURS_TAG).collectAsMap().entrySet())
                     energyConsumptionDayNoRushHours.add(entry.getValue());
 
                 System.out.println("Consumi orari di punta");
@@ -177,33 +174,9 @@ public class MjolnirSparkSession {
 
 
             // --------------- QUERY 3 ---------------
-            JavaPairRDD<String, EnergyConsumptionRecord> rushHoursRecords = sparkContext.parallelize(energyConsumptionDayRushHours).keyBy(new Function<EnergyConsumptionRecord, String>() {
-                @Override
-                public String call(EnergyConsumptionRecord energyConsumptionRecord) throws Exception {
-                    return energyConsumptionRecord.getPlugID();
-                }
-            }).reduceByKey(new Function2<EnergyConsumptionRecord, EnergyConsumptionRecord, EnergyConsumptionRecord>() {
-                @Override
-                public EnergyConsumptionRecord call(EnergyConsumptionRecord energyConsumptionRecord, EnergyConsumptionRecord energyConsumptionRecord2) throws Exception {
-                    EnergyConsumptionRecord ecr = new EnergyConsumptionRecord(RUSH_HOURS_TAG);
-                    ecr.combineMeasures(energyConsumptionRecord, energyConsumptionRecord2);
-                    return ecr;
-                }
-            });
+            JavaPairRDD<String, EnergyConsumptionRecord> rushHoursRecords = EnergyConsumption.combinePlugConsumptions(sparkContext, energyConsumptionDayRushHours, RUSH_HOURS_TAG);
+            JavaPairRDD<String, EnergyConsumptionRecord> noRushHoursRecords = EnergyConsumption.combinePlugConsumptions(sparkContext, energyConsumptionDayRushHours, RUSH_HOURS_TAG);
 
-            JavaPairRDD<String, EnergyConsumptionRecord> noRushHoursRecords = sparkContext.parallelize(energyConsumptionDayNoRushHours).keyBy(new Function<EnergyConsumptionRecord, String>() {
-                @Override
-                public String call(EnergyConsumptionRecord energyConsumptionRecord) throws Exception {
-                    return energyConsumptionRecord.getPlugID();
-                }
-            }).reduceByKey(new Function2<EnergyConsumptionRecord, EnergyConsumptionRecord, EnergyConsumptionRecord>() {
-                @Override
-                public EnergyConsumptionRecord call(EnergyConsumptionRecord energyConsumptionRecord, EnergyConsumptionRecord energyConsumptionRecord2) throws Exception {
-                    EnergyConsumptionRecord ecr = new EnergyConsumptionRecord(NO_RUSH_HOURS_TAG);
-                    ecr.combineMeasures(energyConsumptionRecord, energyConsumptionRecord2);
-                    return ecr;
-                }
-            });
 
             System.out.println("Negli orari di punta abbiamo: ");
             for (Map.Entry<String, EnergyConsumptionRecord> entry : rushHoursRecords.collectAsMap().entrySet()) {
