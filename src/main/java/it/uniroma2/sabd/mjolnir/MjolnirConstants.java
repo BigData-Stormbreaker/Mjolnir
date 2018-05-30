@@ -26,6 +26,7 @@ public class MjolnirConstants {
 
     public static final Long TIMESTAMP_START    = 1377986401L;
     public static final Long TIMESTAMP_END      = 1380578399L;
+    public static final Long SECONDS_PER_DAY    = 86400L;
 
     public static final Double INSTANT_POWER_CONSUMPTION_THRESHOLD = 350D;
 
@@ -53,6 +54,6 @@ public class MjolnirConstants {
     public static final Integer NO_RUSH_WEEKEND_START_D = 6;
     public static final Integer NO_RUSH_WEEKEND_END_D   = 7;
 
-    public static final Double RESET_THRESHOLD_MULTIPLIER = 0.5;
+    public static final Double RESET_THRESHOLD_MULTIPLIER = 0.7;
 
 }

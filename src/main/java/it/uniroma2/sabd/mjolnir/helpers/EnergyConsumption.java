@@ -4,13 +4,13 @@ import it.uniroma2.sabd.mjolnir.entities.EnergyConsumptionRecord;
 import it.uniroma2.sabd.mjolnir.entities.SensorRecord;
 import org.apache.spark.api.java.JavaPairRDD;
 import org.apache.spark.api.java.JavaRDD;
+import org.apache.spark.api.java.JavaSparkContext;
 import org.apache.spark.api.java.function.Function;
 import org.apache.spark.api.java.function.Function2;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
 import org.apache.spark.sql.RowFactory;
 import org.apache.spark.sql.SparkSession;
-import org.apache.spark.sql.expressions.Window;
 import org.apache.spark.sql.types.DataTypes;
 import org.apache.spark.sql.types.StructField;
 import org.apache.spark.sql.types.StructType;
@@ -20,13 +20,12 @@ import java.time.Instant;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
-import static it.uniroma2.sabd.mjolnir.MjolnirConstants.NO_RUSH_HOURS_TAG;
-import static it.uniroma2.sabd.mjolnir.MjolnirConstants.RUSH_HOURS_TAG;
-import static org.apache.spark.sql.functions.asc;
+import static it.uniroma2.sabd.mjolnir.MjolnirConstants.*;
 import static org.apache.spark.sql.functions.desc;
-import static org.apache.spark.sql.functions.rank;
 
 public class EnergyConsumption {
 
@@ -58,6 +57,31 @@ public class EnergyConsumption {
         });
     }
 
+    public static JavaRDD<SensorRecord> getRecordsByDay(JavaRDD<SensorRecord> energyRecords, Integer startHour, Integer endHour, Integer monthDay, Integer weekDay) {
+        // filtering by the given hour and week day timespan
+        return energyRecords.filter(new Function<SensorRecord, Boolean>() {
+            @Override
+            public Boolean call(SensorRecord sensorRecord) throws Exception {
+                // computing date from timestamp (assuming system default timezone)
+                LocalDateTime localDate = Instant.ofEpochMilli(sensorRecord.getTimestamp() * 1000).atZone(ZoneId.systemDefault()).toLocalDateTime();
+                // filtering if record timestamp is in the given timespan (start, end, day of month, day of week)
+                return (startHour <= localDate.getHour() && localDate.getHour() < endHour) &&
+                       (localDate.getDayOfMonth() == monthDay) && (localDate.getDayOfWeek().getValue() == weekDay);
+            }
+        });
+    }
+
+
+    public static JavaRDD<SensorRecord> getEnergyRecordsPerDay(JavaRDD<SensorRecord> energyRecords, Long startDayTimestamp, Long endDayTimestamp) {
+        // filtering in a given day
+        return energyRecords.filter(new Function<SensorRecord, Boolean>() {
+            @Override
+            public Boolean call(SensorRecord sensorRecord) throws Exception {
+                return (startDayTimestamp <= sensorRecord.getTimestamp() && sensorRecord.getTimestamp() <= endDayTimestamp);
+            }
+        });
+    }
+
     public static JavaPairRDD<String, EnergyConsumptionRecord> getEnergyConsumptionPerTimespan(JavaRDD<SensorRecord> energyRecords, Integer tag) {
 
         // key by the plug identifier (assuming per house RDD as input)
@@ -83,7 +107,7 @@ public class EnergyConsumption {
                         return energyConsumptionRecord;
                     }
                 },
-                // -> combine step (updating min/max measures, recomputing variance with new min/max)
+                // -> combine step (updating min/max measures, recomputing variance)
                 new Function2<EnergyConsumptionRecord, EnergyConsumptionRecord, EnergyConsumptionRecord>() {
                     @Override
                     public EnergyConsumptionRecord call(EnergyConsumptionRecord energyConsumptionRecord, EnergyConsumptionRecord energyConsumptionRecord2) throws Exception {
@@ -140,5 +164,42 @@ public class EnergyConsumption {
                                 return new Tuple2<>(row.getInt(0), row.getDouble(1));
                             }
                         });
+    }
+
+
+    public static Map<String, EnergyConsumptionRecord> getMapPlugAvgConsumptionDay(JavaSparkContext sparkContext, ArrayList<EnergyConsumptionRecord> energyConsumptionRecordsRHDay, Integer rushHoursTag) {
+        Map<String, EnergyConsumptionRecord> map = sparkContext.parallelize(energyConsumptionRecordsRHDay).keyBy(new Function<EnergyConsumptionRecord, String>() {
+            @Override
+            public String call(EnergyConsumptionRecord energyConsumptionRecord) throws Exception {
+                return energyConsumptionRecord.getPlugID();
+            }
+        }).reduceByKey(new Function2<EnergyConsumptionRecord, EnergyConsumptionRecord, EnergyConsumptionRecord>() {
+            @Override
+            public EnergyConsumptionRecord call(EnergyConsumptionRecord energyConsumptionRecord, EnergyConsumptionRecord energyConsumptionRecord2) throws Exception {
+                EnergyConsumptionRecord ecr = new EnergyConsumptionRecord(rushHoursTag);
+                ecr.combineMeasures(energyConsumptionRecord, energyConsumptionRecord2);
+                return ecr;
+            }
+        }).collectAsMap();
+
+        return map;
+    }
+
+
+    public static ArrayList<EnergyConsumptionRecord> getAverageAndStdDeviation(HashMap<Integer, ArrayList<EnergyConsumptionRecord>> energyConsumptionDayPerQ, Integer monthDays) {
+
+        ArrayList<EnergyConsumptionRecord> averageConsumptionsRecords = new ArrayList<>();
+
+        // per quarter statistics
+        for (int j = 0; j < DAY_QUARTER_STARTS.length; j++) {
+            // combining over the entire month
+            EnergyConsumptionRecord ecr = new EnergyConsumptionRecord(GENERIC_HOURS_TAG);
+            for (int i = 0; i < monthDays; i++) {
+                ecr.combineMeasures(ecr, energyConsumptionDayPerQ.get(j).get(i));
+            }
+            averageConsumptionsRecords.add(ecr);
+        }
+
+        return averageConsumptionsRecords;
     }
 }
