@@ -194,7 +194,7 @@ public class EnergyConsumption {
 
         Double stdDev;
         Double mean;
-        Double sum = 0.0;
+        Double sum;
 
         // per quarter statistics
         for (int j = 0; j < DAY_QUARTER_STARTS.length; j++) {
@@ -209,6 +209,7 @@ public class EnergyConsumption {
             averageConsumptionsRecords.add(ecr);
             mean = ecr.getAvgEnergyConsumption();
             System.out.print("avgEnergy = " + mean + " in the quarter " + j);
+            sum = 0.0;
             for (int i = 0; i < monthDays; i++) {
                 sum += Math.pow(energyConsumptionDayPerQ.get(j).get(i).getConsumption() - mean, 2.0);
             }
