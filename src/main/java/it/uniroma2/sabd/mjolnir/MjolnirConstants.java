@@ -10,6 +10,9 @@ public class MjolnirConstants {
     public static final String MASTER_YARN  = "yarn";
     public static final String MASTER_LOCAL = "local";
 
+    public static final String CLI_HDFS     = "hdfs";
+    public static final String CLI_HOUSE_ID = "houseid";
+
     public static final String REDIS_HOST   = "localhost";
     public static final Integer REDIS_PORT  = 6379;
 

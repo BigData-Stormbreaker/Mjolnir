@@ -33,16 +33,16 @@ public class MjolnirSparkSession {
         String[] pair;
         for (String arg : args) {
             pair = arg.split("=");
-            if (pair[0].equals("hdfs")) {
+            if (pair[0].equals(CLI_HDFS)) {
                 hdfsAddress = pair[1];
             }
-            if (pair[0].equals("houseid")) {
+            if (pair[0].equals(CLI_HOUSE_ID)) {
                 houseId = Integer.valueOf(pair[1]);
             }
         }
 
         if (hdfsAddress == null) {
-            System.err.println("hdfsAddress is missing");
+            System.err.println("Usage: specify 'hdfs' parameter");
             System.exit(-1);
         }
 
@@ -65,7 +65,7 @@ public class MjolnirSparkSession {
 
         // SENSOR RECORDS - no distinction on power/energy
         SampleReader sr = new SampleReader();
-//        JavaRDD<SensorRecord> allSensorRecords = sr.sampleRead(sparkContext, 0);
+        // JavaRDD<SensorRecord> allSensorRecords = sr.sampleRead(sparkContext, 0);
         JavaRDD<SensorRecord> allSensorRecords = sr.sampleAvroRead(sparkContext, hdfsAddress, houseId);
 
         int maxHouse = HOUSE_NUMBER;
@@ -137,7 +137,7 @@ public class MjolnirSparkSession {
                 JavaRDD<SensorRecord> energyRecordsDay = EnergyConsumption.getEnergyRecordsPerDay(energyRecords, d, d + SECONDS_PER_DAY);
 
                 // initializing aux variables to compute avg diff on rush and not rush hours
-                ArrayList<EnergyConsumptionRecord> energyConsumptionRecordsPerPlugRHQuarter  = new ArrayList<>();
+                ArrayList<EnergyConsumptionRecord> energyConsumptionRecordsPerPlugRHQuarter = new ArrayList<>();
                 ArrayList<EnergyConsumptionRecord> energyConsumptionRecordsPerPlugNRHQuarter = new ArrayList<>();
 
                 // iterating over day quarters
@@ -159,9 +159,6 @@ public class MjolnirSparkSession {
                     ecr.setHouseID(houseID);
                     Map<String, EnergyConsumptionRecord> stringEnergyConsumptionRecordMap = energyConsumptionQ.collectAsMap();
                     for (Map.Entry<String, EnergyConsumptionRecord> entry : stringEnergyConsumptionRecordMap.entrySet()) {
-                        //System.out.println(entry.getKey() + " has consumed: " + entry.getValue().getConsumption() +
-                        //        " in the day " + localDate.getDayOfMonth() +
-                        //        " in the quarter " + j);
                         // updating energy consumption record
                         ecr.combineMeasures(ecr, entry.getValue());
                         // storing record for further analysis
@@ -173,33 +170,15 @@ public class MjolnirSparkSession {
                             energyConsumptionRecordsPerPlugNRHQuarter.add(record);
                     }
 
-                    System.out.println("So the total consumption is: " + ecr.getConsumption());
-
                     // updating quarters values (query2)
                     energyConsumptionDayQ.get(j).add(ecr);
                 }
-
-                System.out.println("Fine dei quarter del giorno " + localDate.getDayOfMonth() + " che è un " + localDate.getDayOfWeek().getValue() + ":");
-                System.out.println("energyConsumptionRecordsPerPlugRHQuarter ha " + energyConsumptionRecordsPerPlugRHQuarter.size() + " record");
-                System.out.println("energyConsumptionRecordsPerPlugNRHQuarter ha " + energyConsumptionRecordsPerPlugNRHQuarter.size() + " record");
 
                 // updating day values (query3)
                 for (Map.Entry<String, EnergyConsumptionRecord> entry : EnergyConsumption.combinePlugConsumptions(sparkContext, energyConsumptionRecordsPerPlugRHQuarter, RUSH_HOURS_TAG).collectAsMap().entrySet())
                     energyConsumptionDayRushHours.add(entry.getValue());
                 for (Map.Entry<String, EnergyConsumptionRecord> entry : EnergyConsumption.combinePlugConsumptions(sparkContext, energyConsumptionRecordsPerPlugNRHQuarter, NO_RUSH_HOURS_TAG).collectAsMap().entrySet())
                     energyConsumptionDayNoRushHours.add(entry.getValue());
-
-                System.out.println("Consumi orari di punta");
-                System.out.println("Ci sono " + energyConsumptionDayRushHours.size() + " elementi");
-                for (EnergyConsumptionRecord ecr : energyConsumptionDayRushHours) {
-                    System.out.println("Plug: " + ecr.getPlugID() + " = " + ecr.getConsumption());
-                }
-
-                System.out.println("Consumi orari non di punta");
-                System.out.println("Ci sono " + energyConsumptionDayNoRushHours.size() + " elementi");
-                for (EnergyConsumptionRecord ecr : energyConsumptionDayNoRushHours) {
-                    System.out.println("Plug: " + ecr.getPlugID() + " = " + ecr.getConsumption());
-                }
             }
 
             // --------------- QUERY 2 ---------------
@@ -210,20 +189,7 @@ public class MjolnirSparkSession {
             JavaPairRDD<String, EnergyConsumptionRecord> rushHoursRecords = EnergyConsumption.combinePlugConsumptions(sparkContext, energyConsumptionDayRushHours, RUSH_HOURS_TAG);
             JavaPairRDD<String, EnergyConsumptionRecord> noRushHoursRecords = EnergyConsumption.combinePlugConsumptions(sparkContext, energyConsumptionDayNoRushHours, NO_RUSH_HOURS_TAG);
 
-
-            System.out.println("Negli orari di punta abbiamo: ");
-            for (Map.Entry<String, EnergyConsumptionRecord> entry : rushHoursRecords.collectAsMap().entrySet()) {
-                System.out.println("Plug id: " + entry.getKey() + " ha consumato in totale: " + entry.getValue().getConsumption());
-            }
-
-            System.out.println("Negli orari non di punta abbiamo: ");
-            for (Map.Entry<String, EnergyConsumptionRecord> entry : noRushHoursRecords.collectAsMap().entrySet()) {
-                System.out.println("Plug id: " + entry.getKey() + " ha consumato in totale: " + entry.getValue().getConsumption());
-            }
-
-            query3Result.add(EnergyConsumption.getPlugsRank(sparkSession, rushHoursRecords, noRushHoursRecords));
         }
-
 
         // --------------- INGESTION TO REDIS ---------------
         RedisHelper redisHelper = new RedisHelper();
