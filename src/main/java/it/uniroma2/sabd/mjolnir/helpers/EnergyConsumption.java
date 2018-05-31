@@ -22,7 +22,6 @@ import java.time.ZoneId;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 
 import static it.uniroma2.sabd.mjolnir.MjolnirConstants.*;
 import static org.apache.spark.sql.functions.desc;
@@ -122,7 +121,7 @@ public class EnergyConsumption {
         return energyAvgByPlug;
     }
 
-    public static JavaRDD<Tuple2<Integer, Double>> getPlugsRank(SparkSession sparkSession, JavaPairRDD<String, EnergyConsumptionRecord> rushHoursConsumptions, JavaPairRDD<String, EnergyConsumptionRecord> notRushHoursConsumptions) {
+    public static JavaRDD<Tuple2<String, Double>> getPlugsRank(SparkSession sparkSession, JavaPairRDD<String, EnergyConsumptionRecord> rushHoursConsumptions, JavaPairRDD<String, EnergyConsumptionRecord> notRushHoursConsumptions) {
 
         // performing a join over the two RDDs and computing the difference between the two average consumptions
         JavaPairRDD<String, Double> plugConsumptionAvgDifferences = rushHoursConsumptions.join(notRushHoursConsumptions).mapValues(new Function<Tuple2<EnergyConsumptionRecord, EnergyConsumptionRecord>, Double>() {
@@ -160,10 +159,10 @@ public class EnergyConsumption {
         return plugsDataset.orderBy(desc("value"))
                 .toJavaRDD()
                 .map(
-                        new Function<Row, Tuple2<Integer, Double>>() {
+                        new Function<Row, Tuple2<String, Double>>() {
                             @Override
-                            public Tuple2<Integer, Double> call(Row row) throws Exception {
-                                return new Tuple2<>(row.getInt(0), row.getDouble(1));
+                            public Tuple2<String, Double> call(Row row) throws Exception {
+                                return new Tuple2<>(row.getString(0), row.getDouble(1));
                             }
                         });
     }

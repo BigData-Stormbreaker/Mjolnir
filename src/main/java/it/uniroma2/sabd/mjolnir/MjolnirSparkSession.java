@@ -4,13 +4,12 @@ import it.uniroma2.sabd.mjolnir.entities.EnergyConsumptionRecord;
 import it.uniroma2.sabd.mjolnir.entities.SensorRecord;
 import it.uniroma2.sabd.mjolnir.helpers.EnergyConsumption;
 import it.uniroma2.sabd.mjolnir.helpers.InstantPowerComputation;
-import org.apache.hadoop.util.hash.Hash;
+import it.uniroma2.sabd.mjolnir.helpers.persistence.RedisHelper;
 import org.apache.spark.SparkConf;
 import org.apache.spark.api.java.JavaPairRDD;
 import org.apache.spark.api.java.JavaRDD;
 import org.apache.spark.api.java.JavaSparkContext;
 import org.apache.spark.api.java.function.Function;
-import org.apache.spark.api.java.function.Function2;
 import org.apache.spark.sql.SparkSession;
 import scala.Tuple2;
 
@@ -21,7 +20,6 @@ import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.Iterator;
 import java.util.Map;
 
 
@@ -61,9 +59,9 @@ public class MjolnirSparkSession {
         SparkSession sparkSession = new SparkSession(sparkContext.sc());
 
         int houseID;
-        ArrayList<Integer> query1Result = new ArrayList<>();
+        HashMap<Integer, ArrayList<Tuple2<Long, Double>>> query1Result = new HashMap<>();
         HashMap<Integer, ArrayList<EnergyConsumptionRecord>> query2Result = new HashMap<>();
-        ArrayList<JavaRDD<Tuple2<Integer, Double>>> query3Result = new ArrayList<>();
+        ArrayList<JavaRDD<Tuple2<String, Double>>> query3Result = new ArrayList<>();
 
         // SENSOR RECORDS - no distinction on power/energy
         SampleReader sr = new SampleReader();
@@ -115,8 +113,7 @@ public class MjolnirSparkSession {
             JavaPairRDD<Long, Double> houseInstantOverPowerThreshold = InstantPowerComputation.getHouseThresholdConsumption(powerRecords);
             // adding to house list if some given time the I.P.C. was over threshold
             if (!houseInstantOverPowerThreshold.isEmpty()) {
-                query1Result.add(houseID);
-                //redisInstance.rpush(REDIS_DB_HOUSE_QUERY1, String.valueOf(houseID));
+                query1Result.put(houseID, (ArrayList<Tuple2<Long, Double>>) houseInstantOverPowerThreshold.collect());
             }
 
             // energy consumption records per house
@@ -162,10 +159,10 @@ public class MjolnirSparkSession {
                     ecr.setHouseID(houseID);
                     Map<String, EnergyConsumptionRecord> stringEnergyConsumptionRecordMap = energyConsumptionQ.collectAsMap();
                     for (Map.Entry<String, EnergyConsumptionRecord> entry : stringEnergyConsumptionRecordMap.entrySet()) {
+                        //System.out.println(entry.getKey() + " has consumed: " + entry.getValue().getConsumption() +
+                        //        " in the day " + localDate.getDayOfMonth() +
+                        //        " in the quarter " + j);
                         // updating energy consumption record
-                        System.out.println(entry.getKey() + " has consumed: " + entry.getValue().getConsumption() +
-                                " in the day " + localDate.getDayOfMonth() +
-                                " in the quarter " + j);
                         ecr.combineMeasures(ecr, entry.getValue());
                         // storing record for further analysis
                         EnergyConsumptionRecord record = entry.getValue();
@@ -211,7 +208,7 @@ public class MjolnirSparkSession {
 
             // --------------- QUERY 3 ---------------
             JavaPairRDD<String, EnergyConsumptionRecord> rushHoursRecords = EnergyConsumption.combinePlugConsumptions(sparkContext, energyConsumptionDayRushHours, RUSH_HOURS_TAG);
-            JavaPairRDD<String, EnergyConsumptionRecord> noRushHoursRecords = EnergyConsumption.combinePlugConsumptions(sparkContext, energyConsumptionDayRushHours, RUSH_HOURS_TAG);
+            JavaPairRDD<String, EnergyConsumptionRecord> noRushHoursRecords = EnergyConsumption.combinePlugConsumptions(sparkContext, energyConsumptionDayNoRushHours, NO_RUSH_HOURS_TAG);
 
 
             System.out.println("Negli orari di punta abbiamo: ");
@@ -224,10 +221,15 @@ public class MjolnirSparkSession {
                 System.out.println("Plug id: " + entry.getKey() + " ha consumato in totale: " + entry.getValue().getConsumption());
             }
 
-
             query3Result.add(EnergyConsumption.getPlugsRank(sparkSession, rushHoursRecords, noRushHoursRecords));
         }
 
+
+        // --------------- INGESTION TO REDIS ---------------
+        RedisHelper redisHelper = new RedisHelper();
+        redisHelper.storeHouseOverPowerThresholdRecords(query1Result);
+        redisHelper.storeHouseQuartersEnergyStats(query2Result);
+        redisHelper.storePlugsRankPerEnergyConsumption(query3Result);
     }
 
 }
