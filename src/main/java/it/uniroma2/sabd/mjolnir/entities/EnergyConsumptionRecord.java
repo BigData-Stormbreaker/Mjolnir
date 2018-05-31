@@ -13,7 +13,7 @@ public class EnergyConsumptionRecord implements Serializable {
     // aux parameter to compute variance over samples
     private Integer counter = 0;
     //    private Double M = 0.0;
-    private Double S = 0.0;
+    private Double stdDev = 0.0;
 
     private Double consumption = 0.0;
 
@@ -68,11 +68,9 @@ public class EnergyConsumptionRecord implements Serializable {
         return consumption / timespan;
     }
 
-    public Double getVariance() {
-        return S / (getCounter());
-    }
+    public Double getStandardDeviation() { return stdDev; }
 
-    public Double getStandardDeviation() { return Math.sqrt(getVariance()); }
+    public void setStandardDeviation(Double stdDev) { this.stdDev = stdDev; }
 
     public Integer getCounter() {
         return counter;

@@ -4,6 +4,7 @@ import it.uniroma2.sabd.mjolnir.entities.EnergyConsumptionRecord;
 import it.uniroma2.sabd.mjolnir.entities.SensorRecord;
 import it.uniroma2.sabd.mjolnir.helpers.EnergyConsumption;
 import it.uniroma2.sabd.mjolnir.helpers.InstantPowerComputation;
+import it.uniroma2.sabd.mjolnir.helpers.persistence.HadoopHelper;
 import it.uniroma2.sabd.mjolnir.helpers.persistence.RedisHelper;
 import org.apache.spark.SparkConf;
 import org.apache.spark.api.java.JavaPairRDD;
@@ -16,6 +17,7 @@ import scala.Tuple2;
 
 import static it.uniroma2.sabd.mjolnir.MjolnirConstants.*;
 
+import java.io.IOException;
 import java.time.Instant;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
@@ -30,7 +32,7 @@ public class MjolnirSparkSession {
     private static String hdfsAddress;
     private static Integer houseId = -1;
 
-    public static void main(String[] args) {
+    public static void main(String[] args) throws IOException {
 
         String[] pair;
         for (String arg : args) {
@@ -70,6 +72,8 @@ public class MjolnirSparkSession {
         // JavaRDD<SensorRecord> allSensorRecords = sr.sampleRead(sparkContext, 0);
         JavaRDD<SensorRecord> allSensorRecords = sr.sampleAvroRead(sparkContext, hdfsAddress, houseId);
 
+        HadoopHelper hadoopHelper = new HadoopHelper(hdfsAddress);
+
         int maxHouse = HOUSE_NUMBER;
 
         if (houseId != -1) {
@@ -82,8 +86,7 @@ public class MjolnirSparkSession {
 
             final Long finalHouseID = (long) houseID;
 
-            if (houseID == -1) {
-
+            if (houseId == -1) {
                 sensorRecords = allSensorRecords.filter(new Function<SensorRecord, Boolean>() {
                     @Override
                     public Boolean call(SensorRecord sensorRecord) throws Exception {
@@ -93,8 +96,6 @@ public class MjolnirSparkSession {
             } else {
                 sensorRecords = allSensorRecords;
             }
-
-            System.out.println(sensorRecords.count());
 
             // POWER & ENERGY RECORDS RDDs
             JavaRDD<SensorRecord> powerRecords = sensorRecords.filter(new Function<SensorRecord, Boolean>() {
@@ -108,14 +109,14 @@ public class MjolnirSparkSession {
                 }
             }).cache();
 
-            System.out.println(powerRecords.first().toString());
-
             // --------------- QUERY 1 ---------------
             // retrieving houses with instant power consumption more than the given threshold (350W)
             JavaPairRDD<Long, Double> houseInstantOverPowerThreshold = InstantPowerComputation.getHouseThresholdConsumption(powerRecords);
             // adding to house list if some given time the I.P.C. was over threshold
             if (!houseInstantOverPowerThreshold.isEmpty()) {
-                query1Result.put(houseID, (ArrayList<Tuple2<Long, Double>>) houseInstantOverPowerThreshold.collect());
+                ArrayList<Tuple2<Long, Double>> collect = new ArrayList<Tuple2<Long, Double>>(houseInstantOverPowerThreshold.collect());
+                query1Result.put(houseID, collect);
+                hadoopHelper.appendHouseOverPowerThresholdRecords(houseID, collect);
             }
 
             // energy consumption records per house
@@ -184,14 +185,20 @@ public class MjolnirSparkSession {
             }
 
             // --------------- QUERY 2 ---------------
-            query2Result.put(houseID, EnergyConsumption.getAverageAndStdDeviation(energyConsumptionDayQ, monthDays));
+            ArrayList<EnergyConsumptionRecord> averageAndStdDeviation = EnergyConsumption.getAverageAndStdDeviation(energyConsumptionDayQ, monthDays);
+            query2Result.put(houseID, averageAndStdDeviation);
+
+            // persist partial results on HDFS
+            hadoopHelper.appendHouseQuartersEnergyStats(houseID, averageAndStdDeviation);
 
 
             // --------------- QUERY 3 ---------------
             JavaPairRDD<String, EnergyConsumptionRecord> rushHoursRecords = EnergyConsumption.combinePlugConsumptions(sparkContext, energyConsumptionDayRushHours, RUSH_HOURS_TAG);
             JavaPairRDD<String, EnergyConsumptionRecord> noRushHoursRecords = EnergyConsumption.combinePlugConsumptions(sparkContext, energyConsumptionDayNoRushHours, NO_RUSH_HOURS_TAG);
 
-            query3Result.add(EnergyConsumption.getPlugsRank(sparkSession, rushHoursRecords, noRushHoursRecords));
+            JavaRDD<Tuple2<String, Double>> plugsRank = EnergyConsumption.getPlugsRank(sparkSession, rushHoursRecords, noRushHoursRecords);
+            query3Result.add(plugsRank);
+            hadoopHelper.storePlugsRankPerEnergyConsumption(houseID, plugsRank);
         }
 
         // --------------- INGESTION TO REDIS ---------------

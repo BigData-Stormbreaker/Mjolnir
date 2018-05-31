@@ -21,6 +21,11 @@ public class MjolnirConstants {
     public static final String REDIS_DB_HOUSE_QUERY2     = "query2/consumptions/";
     public static final String REDIS_DB_HOUSE_QUERY3     = "query3/plugsrank";
 
+    public static final String HDFS_ROOT             = "/mjolnir/results";
+    public static final String HDFS_HOUSE_QUERY1     = "/query1/powerthreshold/";
+    public static final String HDFS_HOUSE_QUERY2     = "/query2/consumptions/";
+    public static final String HDFS_HOUSE_QUERY3     = "/query3/plugsrank/";
+
     public static final Integer PROPERTY_ENERGY = 0;
     public static final Integer PROPERTY_POWER  = 1;
 
