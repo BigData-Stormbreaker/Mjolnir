@@ -10,6 +10,7 @@ import org.apache.spark.api.java.JavaPairRDD;
 import org.apache.spark.api.java.JavaRDD;
 import org.apache.spark.api.java.JavaSparkContext;
 import org.apache.spark.api.java.function.Function;
+import org.apache.spark.api.java.function.Function2;
 import org.apache.spark.sql.SparkSession;
 import scala.Tuple2;
 
@@ -20,6 +21,7 @@ import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.Iterator;
 import java.util.Map;
 
 
@@ -99,12 +101,12 @@ public class MjolnirSparkSession {
                 public Boolean call(SensorRecord sensorRecord) throws Exception {
                     return sensorRecord.isPower();
                 }
-            });
+            }).cache();
             JavaRDD<SensorRecord> energyRecords = sensorRecords.filter(new Function<SensorRecord, Boolean>() {
                 public Boolean call(SensorRecord sensorRecord) throws Exception {
                     return sensorRecord.isEnergy();
                 }
-            });
+            }).cache();
 
             System.out.println(powerRecords.first().toString());
 
@@ -189,6 +191,7 @@ public class MjolnirSparkSession {
             JavaPairRDD<String, EnergyConsumptionRecord> rushHoursRecords = EnergyConsumption.combinePlugConsumptions(sparkContext, energyConsumptionDayRushHours, RUSH_HOURS_TAG);
             JavaPairRDD<String, EnergyConsumptionRecord> noRushHoursRecords = EnergyConsumption.combinePlugConsumptions(sparkContext, energyConsumptionDayNoRushHours, NO_RUSH_HOURS_TAG);
 
+            query3Result.add(EnergyConsumption.getPlugsRank(sparkSession, rushHoursRecords, noRushHoursRecords));
         }
 
         // --------------- INGESTION TO REDIS ---------------
