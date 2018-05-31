@@ -11,11 +11,19 @@ import java.io.Serializable;
 
 import static it.uniroma2.sabd.mjolnir.MjolnirConstants.INSTANT_POWER_CONSUMPTION_THRESHOLD;
 
+/**
+ * This class collects all the methods necessary to handle operations over instant power consumptions
+ */
 public class InstantPowerComputation implements Serializable {
 
 
     public InstantPowerComputation(){ }
 
+    /**
+     * This static method can be used to retrieve power sensor records aggregated by timestamp
+     * @param powerRecords: RDD of sensor records
+     * @return JavaPairRDD<Long, Iterable<Tuple2<Long, SensorRecord>>>
+     */
     public static JavaPairRDD<Long, Iterable<Tuple2<Long, SensorRecord>>> getSensorRecordsByTimestamp(JavaRDD<SensorRecord> powerRecords) {
         // retrieving sensors records by timestamp
         JavaPairRDD<Long, Iterable<Tuple2<Long, SensorRecord>>> houseInstantPowerRecordsByTime = powerRecords.keyBy(new Function<SensorRecord, Long>() {
@@ -35,6 +43,12 @@ public class InstantPowerComputation implements Serializable {
         return houseInstantPowerRecordsByTime;
     }
 
+    /**
+     * This static method can be used in order to retrieve, per house, the couple (timestamp, value)
+     * of the total average instant power consumption over a given threshold (350W is by default)
+     * @param housePowerRecords: RDD of power sensor records
+     * @return JavaPairRDD<Long, Double>
+     */
     public static JavaPairRDD<Long, Double> getHouseThresholdConsumption(JavaRDD<SensorRecord> housePowerRecords) {
 
         // retrieving all the aggregated instant power consumption values

@@ -26,9 +26,18 @@ import java.util.List;
 import static it.uniroma2.sabd.mjolnir.MjolnirConstants.*;
 import static org.apache.spark.sql.functions.desc;
 
+/**
+ * This class collects all the methods necessary to handle operations over energy consumptions
+ */
 public class EnergyConsumption {
 
-
+    /**
+     * This method can be used in order to retrieve all the records in a given timespan
+     * @param energyRecords: RDD of energy records
+     * @param startHour: Integer
+     * @param endHour: Integer
+     * @return JavaRDD<SensorRecord>
+     */
     public static JavaRDD<SensorRecord> getRecordsByTimespan(JavaRDD<SensorRecord> energyRecords, Integer startHour, Integer endHour) {
         // filtering by the given hour timespan
         return energyRecords.filter(new Function<SensorRecord, Boolean>() {
@@ -42,6 +51,15 @@ public class EnergyConsumption {
         });
     }
 
+    /**
+     * This method can be used in order to retrieve all the records in a given timespan
+     * @param energyRecords: RDD of energy records
+     * @param startHour: Integer
+     * @param endHour: Integer
+     * @param startWeekDay: Integer
+     * @param endWeekDay: Integer
+     * @return JavaRDD<SensorRecord>
+     */
     public static JavaRDD<SensorRecord> getRecordsByTimespan(JavaRDD<SensorRecord> energyRecords, Integer startHour, Integer endHour, Integer startWeekDay, Integer endWeekDay) {
         // filtering by the given hour and week day timespan
         return energyRecords.filter(new Function<SensorRecord, Boolean>() {
@@ -56,6 +74,16 @@ public class EnergyConsumption {
         });
     }
 
+    /**
+     * This method can be used in order to retrieve all the ricords in a given day of the month
+     * and a given timespan of the day
+     * @param energyRecords: RDD of energy records
+     * @param startHour: Integer
+     * @param endHour: Integer
+     * @param monthDay: Integer
+     * @param weekDay: Integer
+     * @return JavaRDD<SensorRecord>
+     */
     public static JavaRDD<SensorRecord> getRecordsByDay(JavaRDD<SensorRecord> energyRecords, Integer startHour, Integer endHour, Integer monthDay, Integer weekDay) {
         // filtering by the given hour and week day timespan
         return energyRecords.filter(new Function<SensorRecord, Boolean>() {
@@ -70,7 +98,14 @@ public class EnergyConsumption {
         });
     }
 
-
+    /**
+     * This method can be used in order to retrieve all the ricords in a given day
+     * identified by starting and ending timestamps
+     * @param energyRecords: RDD of energy records
+     * @param startDayTimestamp: Long, timestamp
+     * @param endDayTimestamp: Long, timestamp
+     * @return JavaRDD<SensorRecord>
+     */
     public static JavaRDD<SensorRecord> getEnergyRecordsPerDay(JavaRDD<SensorRecord> energyRecords, Long startDayTimestamp, Long endDayTimestamp) {
         // filtering in a given day
         return energyRecords.filter(new Function<SensorRecord, Boolean>() {
@@ -81,6 +116,12 @@ public class EnergyConsumption {
         });
     }
 
+    /**
+     * This method can be used to retireve all the average energy consumptions in a predefined timespan
+     * @param energyRecords: RDD of energy records
+     * @param tag: Integer, kind of hours (e.g. rush hours)
+     * @return JavaPairRDD<String, EnergyConsumptionRecord>
+     */
     public static JavaPairRDD<String, EnergyConsumptionRecord> getEnergyConsumptionPerTimespan(JavaRDD<SensorRecord> energyRecords, Integer tag) {
 
         // key by the plug identifier (assuming per house RDD as input)
@@ -121,6 +162,14 @@ public class EnergyConsumption {
         return energyAvgByPlug;
     }
 
+    /**
+     * This method can be used in order to compute, leveraging on SparkSQL, the rank of plugs
+     * that are consuming less in no-rush-hours
+     * @param sparkSession: SparkSQL Session
+     * @param rushHoursConsumptions: PairRDD of EnergyConsumptionRecord by plug unique identifier (rush hours)
+     * @param notRushHoursConsumptions: PairRDD of EnergyConsumptionRecord by plug unique identifier (no rush hours)
+     * @return JavaRDD<Tuple2<String, Double>>
+     */
     public static JavaRDD<Tuple2<String, Double>> getPlugsRank(SparkSession sparkSession, JavaPairRDD<String, EnergyConsumptionRecord> rushHoursConsumptions, JavaPairRDD<String, EnergyConsumptionRecord> notRushHoursConsumptions) {
 
         // performing a join over the two RDDs and computing the difference between the two average consumptions
@@ -128,7 +177,6 @@ public class EnergyConsumption {
             @Override
             public Double call(Tuple2<EnergyConsumptionRecord, EnergyConsumptionRecord> recordsTuple) throws Exception {
                 // returning difference by rush / no rush hours consumption
-                // TODO rush hour days are less than no rush hour days
                 Double rushValue   = (recordsTuple._1.getTag().equals(RUSH_HOURS_TAG)) ? recordsTuple._1.getAvgEnergyConsumption(30) : recordsTuple._2.getAvgEnergyConsumption(30);
                 Double noRushValue = (recordsTuple._1.getTag().equals(NO_RUSH_HOURS_TAG)) ? recordsTuple._1.getAvgEnergyConsumption(30) : recordsTuple._2.getAvgEnergyConsumption(30);
                 return rushValue - noRushValue;
@@ -167,10 +215,17 @@ public class EnergyConsumption {
                         });
     }
 
+    /**
+     * This method can be used to efficiently combine consumption from different plugs given a raw dataset
+     * loaded from memory and not already parallelized
+     * @param sparkContext: SparkContext
+     * @param energyConsumptionRecordsQuarter: ArrayList of EnergyConsumptionRecord of a pre-defined quarter
+     * @param rushHoursTag: Integer, tag of the kind of hours (e.g. rush hours)
+     * @return JavaPairRDD<String, EnergyConsumptionRecord>
+     */
+    public static JavaPairRDD<String, EnergyConsumptionRecord> combinePlugConsumptions(JavaSparkContext sparkContext, ArrayList<EnergyConsumptionRecord> energyConsumptionRecordsQuarter, Integer rushHoursTag) {
 
-    public static JavaPairRDD<String, EnergyConsumptionRecord> combinePlugConsumptions(JavaSparkContext sparkContext, ArrayList<EnergyConsumptionRecord> energyConsumptionRecordsRHQuarter, Integer rushHoursTag) {
-
-        return sparkContext.parallelize(energyConsumptionRecordsRHQuarter).keyBy(new Function<EnergyConsumptionRecord, String>() {
+        return sparkContext.parallelize(energyConsumptionRecordsQuarter).keyBy(new Function<EnergyConsumptionRecord, String>() {
             @Override
             public String call(EnergyConsumptionRecord energyConsumptionRecord) throws Exception {
                 return energyConsumptionRecord.getPlugID();
@@ -187,7 +242,13 @@ public class EnergyConsumption {
 
     }
 
-
+    /**
+     * This method can be used to compute average and standard deviation online while iterating over energy consumptions
+     * of houses over the quarters, combining records after parallelized jobs are finished
+     * @param energyConsumptionDayPerQ: HashMap of consumption records by day
+     * @param monthDays: Integer, number of days to compute over the monthly average
+     * @return: ArrayList<EnergyConsumptionRecord>
+     */
     public static ArrayList<EnergyConsumptionRecord> getAverageAndStdDeviation(HashMap<Integer, ArrayList<EnergyConsumptionRecord>> energyConsumptionDayPerQ, Integer monthDays) {
 
         ArrayList<EnergyConsumptionRecord> averageConsumptionsRecords = new ArrayList<>();

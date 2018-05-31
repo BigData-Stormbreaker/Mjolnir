@@ -62,9 +62,6 @@ public class SampleReader implements Serializable {
             }
         });
 
-        System.out.println("TOTAL RECORDS: " + String.valueOf(accumulator.value()));
-
-
         return sensorData;
     }
 
