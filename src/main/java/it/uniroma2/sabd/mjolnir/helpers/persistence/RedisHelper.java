@@ -72,7 +72,7 @@ public class RedisHelper implements Serializable {
     }
 
     /**
-     * This method can be used in order to store (per house) the couple (dayQuarter, avgEnergy, stdDeviation)
+     * This method can be used in order to store (per house) the triple (dayQuarter, avgEnergy, stdDeviation)
      * of the sensor records of energy type, aggregated by day quarters starting at 0,6,12,18
      * @param query: HashMap, the query2 results
      * @return Integer, the number of records updated

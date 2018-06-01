@@ -20,11 +20,20 @@ import java.io.File;
 import java.sql.Timestamp;
 import java.util.List;
 
+/**
+ * This class implements methods for reading proper .csv files or avro files from HDFS
+ */
 public class SampleReader implements Serializable {
 
     public SampleReader() {
     }
 
+    /**
+     * This method read the plain text dataset and return an RDD of sensorRecords
+     * @param sc, JavaSparkContext
+     * @param house_id, houseID of the house (or -1 to read the compelte dataset)
+     * @return JavaRDD of sensorRecords
+     */
     public JavaRDD<SensorRecord> sampleRead(JavaSparkContext sc, Integer house_id) {
 
         // retrieving data
@@ -41,7 +50,8 @@ public class SampleReader implements Serializable {
             public SensorRecord call(String line) throws Exception {
                 // splitting csv line
                 String[] fields = line.split(",");
-                SensorRecord sr = new SensorRecord(Long.valueOf(fields[0]),     //id_record
+                SensorRecord sr = new SensorRecord(
+                        Long.valueOf(fields[0]),     //id_record
                         Long.valueOf(fields[1]),     //timestamp
                         Double.valueOf(fields[2]),   //value - measure
                         Integer.valueOf(fields[3]),  //property - cumulative energy
@@ -54,21 +64,27 @@ public class SampleReader implements Serializable {
         });
 
         /* DEBUG */
-        final LongAccumulator accumulator = sc.sc().longAccumulator();
-
-        sensorData.foreach(new VoidFunction<SensorRecord>() {
-            public void call(SensorRecord sensorRecord) throws Exception {
-                accumulator.add(1);
-            }
-        });
+//        final LongAccumulator accumulator = sc.sc().longAccumulator();
+//
+//        sensorData.foreach(new VoidFunction<SensorRecord>() {
+//            public void call(SensorRecord sensorRecord) throws Exception {
+//                accumulator.add(1);
+//            }
+//        });
 
         return sensorData;
     }
 
+    /**
+     * This method read the dataset serialized in AVRO on HDFS and return an RDD of sensorRecords
+     * @param sc, JavaSparkContext
+     * @param hdfsAddress, HDFS Address
+     * @param house_id, houseID of the house (or -1 to read the compelte dataset)
+     * @return JavaRDD of sensorRecords
+     */
     public JavaRDD<SensorRecord> sampleAvroRead(JavaSparkContext sc, String hdfsAddress, Integer house_id) {
 
-        // retrieving data
-        // all data
+        // prepare SparkSession and set the compression codec
         SparkSession sparkSession = new SparkSession(sc.sc());
         sparkSession.conf().set("spark.sql.avro.compression.codec", "snappy");
 
@@ -80,48 +96,37 @@ public class SampleReader implements Serializable {
             load = sparkSession.read()
                     .format("com.databricks.spark.avro")
                     .load("hdfs://" + hdfsAddress + "/ingestNiFi/house" + house_id + "/d14_filtered.csv");
-        // all data
-        } else {
+        } else { // or all data
             load = sparkSession.read()
                     .format("com.databricks.spark.avro")
                     .load("hdfs://" + hdfsAddress + "/ingestNiFi/d14_filtered.csv");
         }
 
-
-//        if (house_id == -1) {
-//
-//            data = sc.textFile(getClass().getClassLoader().getResource("d14_filtered.csv").getPath());
-//        } else { //or per-house data
-//            data = sc.textFile("hdfs://localhost:9000/ingest20/house" + house_id + "/");
-//        }
-
         // obtaining an RDD of sensor records
         JavaRDD<SensorRecord> sensorData = load.toJavaRDD().map(new Function<Row, SensorRecord>() {
             public SensorRecord call(Row row) throws Exception {
                 // splitting csv line
-                SensorRecord sr = new SensorRecord((Long) row.getAs("id"),     //id_record
-                        (Long) row.getAs("timestamp"),     //timestamp
-                        (Double) row.getAs("value"),        //value - measure
+                SensorRecord sr = new SensorRecord(
+                        (Long) row.getAs("id"),               //id_record
+                        (Long) row.getAs("timestamp"),        //timestamp
+                        (Double) row.getAs("value"),          //value - measure
                         (Integer) row.getAs("property"),      //property - cumulative energy
                         //or power snapshot
-                        (Long) row.getAs("plug_id"),//plug_id
-                        (Long) row.getAs("household_id"),//household_id
-                        (Long) row.getAs("house_id")); //house_id
+                        (Long) row.getAs("plug_id"),          //plug_id
+                        (Long) row.getAs("household_id"),     //household_id
+                        (Long) row.getAs("house_id"));        //house_id
                 return sr;
             }
         });
 
         /* DEBUG */
-        final LongAccumulator accumulator = sc.sc().longAccumulator();
-
-        sensorData.foreach(new VoidFunction<SensorRecord>() {
-            public void call(SensorRecord sensorRecord) throws Exception {
-                accumulator.add(1);
-            }
-        });
-
-        System.out.println("TOTAL RECORDS: " + String.valueOf(accumulator.value()));
-
+//        final LongAccumulator accumulator = sc.sc().longAccumulator();
+//
+//        sensorData.foreach(new VoidFunction<SensorRecord>() {
+//            public void call(SensorRecord sensorRecord) throws Exception {
+//                accumulator.add(1);
+//            }
+//        });
 
         return sensorData;
     }

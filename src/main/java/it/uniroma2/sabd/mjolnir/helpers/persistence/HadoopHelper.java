@@ -16,13 +16,20 @@ import java.util.Map;
 
 import static it.uniroma2.sabd.mjolnir.MjolnirConstants.*;
 
-
+/**
+ * This class can be used in order to handle operations of HDFS cluster
+ * and ingestion of partial results from Spark cluster to HDFS
+ */
 public class HadoopHelper {
 
     private String hdfsAddress = null;
     private Long time = null;
     private Configuration config = null;
 
+    /**
+     * This constructor will initialize the HDFS configuration, time and address.
+     * @param hdfsAddress, hdfsAddress to connect (e.g.: localhost:9000)
+     */
     public HadoopHelper(String hdfsAddress) {
         if (config == null) {
             config = new Configuration();
@@ -33,6 +40,14 @@ public class HadoopHelper {
     }
 
 
+    /**
+     * This method can be used in order to append (per house) the couple (timestamp, value) where value is the
+     * house total instant power consumption over a given threshold (350 KW by default) to HDFS
+     * in a unique file (per run)
+     * @param houseID, houseID of the house
+     * @param records, ArrayList of Tuple2 of timestamp and power value
+     * @throws IOException
+     */
     public void appendHouseOverPowerThresholdRecords(Integer houseID, ArrayList<Tuple2<Long, Double>> records) throws IOException {
 
         FileSystem fs = FileSystem.get(config);
@@ -58,6 +73,15 @@ public class HadoopHelper {
     }
 
 
+    /**
+     * This method can be used in order to append (per house) the triple (dayQuarter, avgEnergy, stdDeviation)
+     * of the sensor records of energy type, aggregated by day quarters starting at 0,6,12,18 to HDFS
+     * in a unique file (per run)
+     * @param houseID
+     * @param newrecord
+     * @return
+     * @throws IOException
+     */
     public Integer appendHouseQuartersEnergyStats(Integer houseID, ArrayList<EnergyConsumptionRecord> newrecord) throws IOException {
 
         FileSystem fs = FileSystem.get(config);
@@ -85,6 +109,14 @@ public class HadoopHelper {
         return added;
     }
 
+    /**
+     * This method will append the values calculated in the query 3 for the plugs (per house) not ordered
+     * to persist such values in a unique file (per run) on HDFS
+     * @param houseID
+     * @param newrecord
+     * @return
+     * @throws IOException
+     */
     public Integer storePlugsRankPerEnergyConsumption(Integer houseID, JavaRDD<Tuple2<String, Double>> newrecord) throws IOException {
 
         FileSystem fs = FileSystem.get(config);
